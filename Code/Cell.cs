@@ -87,7 +87,7 @@ public sealed class Cell : Component
 			return;
 		}
 		hud.Score = hud.Score + 1;
-		if (Type == CellType.Number)
+		if (Type == CellType.Number || Number > 0)
 		{
 			switch (Number)
 			{
@@ -122,7 +122,7 @@ public sealed class Cell : Component
 			Log.Info($"Number: {Number}");
 			return;
 		}
-		if (Type == CellType.Empty || Number == 0)
+		if (Type == CellType.Empty && Number == 0)
 		{
 			//TODO: Show all nearby empty cells (recursively) and numbers
 			Log.Info($"Revealing Nearby Cells");
