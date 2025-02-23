@@ -14,19 +14,6 @@ public sealed class Chunk : Component
 	protected override void OnStart()
 	{
 		base.OnStart();
-		// create 16x16 grid of cells
-		// for (int z = 0; z < 16; z++)
-		// {
-		// 	for (int x = 0; x < 16; x++)
-		// 	{
-		// 		// Create from prefab
-		// 		var obj = prefab_cell.Clone();
-		// 		obj.Name = $"Cell-{X},{Z}/{x},{z}";
-		// 		obj.LocalPosition = new Vector3((x * 50) - (8 * 50), 0, (z * 50) - (8 * 50));
-		// 		obj.Parent = GameObject;
-		// 		Cells.Add(obj);
-		// 	}
-		// }
 
 		// Create using an algorythm for better performance and generating based on minesweeper rules
 		var random = new Random();
