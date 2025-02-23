@@ -1,0 +1,28 @@
+{
+  "Title": "3D Infinite Minesweeper ",
+  "Type": "game",
+  "Org": "sandrpdev",
+  "Ident": "3d_infinite_minesweeper",
+  "Schema": 1,
+  "IncludeSourceFiles": false,
+  "Resources": null,
+  "PackageReferences": [],
+  "EditorReferences": null,
+  "IsWhitelistDisabled": false,
+  "Metadata": {
+    "MaxPlayers": 64,
+    "MinPlayers": 1,
+    "TickRate": 50,
+    "GameNetworkType": "Multiplayer",
+    "MapSelect": "Unrestricted",
+    "MapList": [
+      "facepunch.flatgrass"
+    ],
+    "RankType": "None",
+    "PerMapRanking": false,
+    "LeaderboardType": "None",
+    "CsProjName": "",
+    "StartupScene": "scenes/mainmenu.scene",
+    "LaunchMode": "Normal"
+  }
+}

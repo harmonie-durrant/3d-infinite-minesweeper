@@ -1,0 +1,17 @@
+HUD
+{
+	position: absolute;
+	top: 20px;
+	left: 20px;
+	justify-content: center;
+	align-items: center;
+	font-weight: bold;
+	border-radius: 20px;
+
+	.title
+	{
+		font-size: 35px;
+		font-family: Poppins;
+		color: #fff;
+	}
+}

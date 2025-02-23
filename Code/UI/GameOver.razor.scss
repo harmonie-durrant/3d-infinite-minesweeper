@@ -1,0 +1,52 @@
+GameOver
+{
+
+	.game-over
+	{
+		top: 0;
+		left: 0;
+		width: 100vw;
+		height: 100vh;
+		position: absolute;
+		z-index: 1000;
+		background-color: #000000cc;
+		flex-direction: column;
+		justify-content: center;
+		align-items: center;
+		pointer-events: all;
+	}
+
+	.title
+	{
+		font-weight: bold;
+		font-size: 50px;
+		font-family: Poppins;
+		color: #dd4444;
+	}
+
+	.score-text
+	{
+		font-size: 40px;
+		font-weight: bold;
+		font-family: Poppins;
+		color: white;
+		margin-bottom: 40px;
+	}
+
+	.buttons
+	{
+		flex-direction: row;
+		justify-content: center;
+		align-items: center;
+		gap: 20px;
+	}
+
+	.button
+	{
+		background-color: #dd4444;
+		color: white;
+		padding: 10px 20px;
+		border-radius: 8px;
+		cursor: pointer;
+	}
+}

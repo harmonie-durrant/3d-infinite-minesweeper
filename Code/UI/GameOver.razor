@@ -1,0 +1,52 @@
+@using Sandbox;
+@using Sandbox.UI;
+@inherits PanelComponent
+@namespace Sandbox
+
+@if (!Show) return;
+<root>
+	<div class="game-over">
+		<div class="title">Game Over</div>
+		<div class="score-text">Score: @(HUD.Instance.Score)</div>
+		<div class="buttons">
+			<button class="button" OnClick="@RestartGame">
+				Restart
+			</button>
+			<button class="button" OnClick="@GoToMainMenu">
+				Main Menu
+			</button>
+		</div>
+	</div>
+</root>
+
+@code
+{
+	public static GameOver Instance {
+		get
+		{
+			if ( !_instance.IsValid() )
+			{
+				_instance = Game.ActiveScene.GetAllComponents<GameOver>().FirstOrDefault();
+			}
+			return _instance;
+		}
+	}
+	private static GameOver _instance { get; set; } = null;
+
+	public bool Show { get; set; } = false;
+
+	private void RestartGame()
+	{
+		Scene.LoadFromFile("scenes/Game.scene");
+	}
+
+	private void GoToMainMenu()
+	{
+		Scene.LoadFromFile("scenes/MainMenu.scene");
+	}
+
+	/// <summary>
+	/// the hash determines if the system should be rebuilt. If it changes, it will be rebuilt
+	/// </summary>
+	protected override int BuildHash() => System.HashCode.Combine( Show );
+}

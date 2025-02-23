@@ -1,0 +1,27 @@
+@using Sandbox;
+@using Sandbox.UI;
+@inherits PanelComponent
+@namespace Sandbox
+
+<root>
+	<div class="title">Score: @Score</div>
+</root>
+
+@code
+{
+	public static HUD Instance {
+		get
+		{
+			if ( !_instance.IsValid() )
+			{
+				_instance = Game.ActiveScene.GetAllComponents<HUD>().FirstOrDefault();
+			}
+			return _instance;
+		}
+	}
+	private static HUD _instance { get; set; } = null;
+
+	public int Score { get; set; } = 0;
+
+	protected override int BuildHash() => System.HashCode.Combine( Score );
+}

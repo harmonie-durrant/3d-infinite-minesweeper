@@ -1,0 +1,38 @@
+@using Sandbox;
+@using Sandbox.UI;
+@inherits PanelComponent
+@namespace Sandbox
+
+<root>
+	<div class="title">Welcome to 3D Infinite Minesweeper</div>
+	<div class="buttons">
+		<button class="button" OnClick="@Play">
+			Play
+		</button>
+		<button class="button" OnClick="@Quit">
+			Quit
+		</button>
+
+	</div>
+</root>
+
+@code
+{
+	/// <summary>
+	/// Start a new game
+	/// </summary>
+	private void Play()
+	{
+		Scene.LoadFromFile("scenes/Game.scene");
+	}
+
+	/// <summary>
+	/// Quit the game
+	/// </summary>
+	private void Quit()
+	{
+		Networking.Disconnect();
+	}
+
+	//protected override int BuildHash() => System.HashCode.Combine();
+}
