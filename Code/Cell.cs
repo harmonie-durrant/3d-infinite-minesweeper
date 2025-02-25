@@ -3,155 +3,443 @@ using System.Linq;
 
 public enum CellState
 {
-	Hidden,
-	Shown,
-	Flagged
+    Hidden,
+    Shown,
+    Flagged
 }
 
 public enum CellType
 {
-	Empty,
-	Mine,
-	Number
+    Empty,
+    Mine,
+    Number
 }
 
 public sealed class Cell : Component
 {
-	[Property] public CellState State { get; set; } = CellState.Hidden;
-	[Property] public CellType Type { get; set; } = CellType.Empty;
-	[Property] public int Number { get; set; } = 0;
-	[Property] public bool HasExploded { get; set; } = false;
-	public HUD hud {
-		get => HUD.Instance;
-	}
-	public void Show()
+	public int X { get; set; } = 0;
+	public int Z { get; set; } = 0;
+    public CellState State { get; set; } = CellState.Hidden;
+    public CellType Type { get; set; } = CellType.Empty;
+    public int Number { get; set; } = 0;
+    public bool HasExploded { get; set; } = false;
+	public bool IsHovered { get; set; } = false;
+
+    public HUD hud {
+        get => HUD.Instance;
+    }
+
+	#region 
+
+	public bool IsHidden => State == CellState.Hidden;
+	public bool IsShown => State == CellState.Shown;
+	public bool IsFlagged => State == CellState.Flagged;
+	public bool IsEmpty => Type == CellType.Empty;
+	public bool IsMine => Type == CellType.Mine;
+	public bool IsNumber => Type == CellType.Number;
+
+	#endregion
+
+	public void ActivateHover()
 	{
-		if (State == CellState.Shown || State == CellState.Flagged)
+		if (IsShown || IsHovered)
 		{
 			return;
 		}
-		var _renderer = GameObject.GetComponents<SkinnedModelRenderer>().FirstOrDefault();
-		if (_renderer == null)
+		IsHovered = true;
+		var renderer = GetRenderer();
+        if (renderer == null)
+        {
+            return;
+        }
+		if (IsFlagged)
+        {
+            renderer.MaterialOverride = Material.Load("materials/flag_selected.vmat");
+        }
+        else
+        {
+            renderer.MaterialOverride = Material.Load("materials/unknown_selected.vmat");
+        }
+	}
+
+	public void DeactivateHover()
+	{
+		if (IsShown || !IsHovered)
 		{
-			Log.Error("Failed to get renderer component");
 			return;
 		}
-		State = CellState.Shown;
-		if (Type == CellType.Mine)
+		IsHovered = false;
+		var renderer = GetRenderer();
+		if (renderer == null)
 		{
-			bool other_has_exploded = false;
-			var chunk = GameObject.Parent.Parent.GetComponent<Chunk>();
+			return;
+		}
+		if (IsFlagged)
+		{
+			renderer.MaterialOverride = Material.Load("materials/flag.vmat");
+		}
+		else
+		{
+			renderer.MaterialOverride = Material.Load("materials/unknown.vmat");
+		}
+	}
+
+	public List<Cell> GetNearbyCells()
+	{
+		return Game.ActiveScene.GetAllComponents<Cell>().Where(cell => {
+			return cell.WorldPosition.Distance(WorldPosition) <= 75 && cell.WorldPosition.Distance(WorldPosition) > 1;
+		}).ToList();
+	}
+
+	public void ShowDebug()
+	{
+		var nearby = GetNearbyCells();
+		Log.Info($"Found {nearby.Count()} nearby cells (DEBUG)");
+		foreach (var cell in nearby)
+		{
+			var cellComponent = cell.GetComponentInChildren<Cell>();
+			if (cellComponent == null)
+			{
+				Log.Error("Failed to get cell component");
+				return;
+			}
+			// set Tint to green
+			cell.GameObject.GetComponent<SkinnedModelRenderer>().Tint = Color.Green;
+		}
+	}
+
+    public void Show()
+    {
+        if (IsShown || IsFlagged)
+        {
+			Log.Info("Failed to show cell: already shown or flagged");
+            return;
+        }
+
+        var renderer = GetRenderer();
+        if (renderer == null)
+        {
+			Log.Info("Failed to show cell: failed to get renderer");
+            return;
+        }
+
+        State = CellState.Shown;
+
+        if (IsMine)
+        {
+			Log.Info("Is a mine");
+            HandleMineCell(renderer);
+            return;
+        }
+
+        hud.Score += 1;
+
+        if (IsNumber || Number > 0)
+        {
+			Log.Info("Is a Number");
+            SetNumberMaterial(renderer);
+            return;
+        }
+
+        if (IsEmpty && Number == 0)
+        {
+			Log.Info("Is Empty");
+            RevealEmptyCell(renderer);
+        }
+    }
+
+    private SkinnedModelRenderer GetRenderer()
+    {
+        var renderer = GameObject.GetComponents<SkinnedModelRenderer>().FirstOrDefault();
+        if (renderer == null)
+        {
+            Log.Error("Failed to get renderer component");
+        }
+        return renderer;
+    }
+
+    private void HandleMineCell(SkinnedModelRenderer renderer)
+    {
+
+        if (CameraMovement.Instance.IsGameOver)
+        {
+            renderer.MaterialOverride = Material.Load("materials/bomb.vmat");
+            return;
+        }
+
+        CameraMovement.Instance.IsGameOver = true;
+        renderer.MaterialOverride = Material.Load("materials/bomb_exploded.vmat");
+        HasExploded = true;
+        RevealAllMines();
+        GameOver.Instance.Show = true;
+    }
+
+    private void RevealAllMines()
+    {
+		var chunks = Game.ActiveScene.GetAllComponents<Chunk>();
+		foreach (var chunk in chunks)
+		{
 			if (chunk == null)
 			{
 				Log.Error("Failed to get chunk component");
 				return;
 			}
+
 			foreach (var cell in chunk.Cells)
 			{
-				var _cell = cell.GetComponentInChildren<Cell>();
-				if (_cell == null)
+				var cellComponent = cell.GetComponentInChildren<Cell>();
+				if (cellComponent.IsMine)
 				{
-					continue;
+					cellComponent.Show();
 				}
-				if (_cell.HasExploded)
+				else if (cellComponent.IsFlagged)
 				{
-					other_has_exploded = true;
-					break;
-				}
-			}
-			if (other_has_exploded)
-			{
-				_renderer.MaterialOverride = Material.Load("materials/bomb.vmat");
-				return;
-			}
-			_renderer.MaterialOverride = Material.Load("materials/bomb_exploded.vmat");
-			HasExploded = true;
-			foreach (var cell in chunk.Cells)
-			{
-				var _cell = cell.GetComponentInChildren<Cell>();
-				if (_cell == null)
-				{
-					continue;
-				}
-				if (_cell.Type == CellType.Mine)
-				{
-					_cell.Show();
+					ShowIncorrectFlag(cellComponent);
 				}
 			}
+		}
+    }
 
-			//TODO: ulong id = Game.SteamId;
-			//TODO: Save Score in database
-
-			GameOver.Instance.Show = true;
-			CameraMovement.Instance.IsGameOver = true;
+	private void ShowIncorrectFlag(Cell cellComponent)
+	{
+		var renderer = cellComponent.GetRenderer();
+		if (renderer == null)
+		{
 			return;
 		}
-		hud.Score = hud.Score + 1;
-		if (Type == CellType.Number || Number > 0)
+		renderer.MaterialOverride = Material.Load("materials/flag_incorrect.vmat");
+	}
+
+    private void SetNumberMaterial(SkinnedModelRenderer renderer)
+    {
+        string materialPath = Number switch
+        {
+            1 => "materials/1.vmat",
+            2 => "materials/2.vmat",
+            3 => "materials/3.vmat",
+            4 => "materials/4.vmat",
+            5 => "materials/5.vmat",
+            6 => "materials/6.vmat",
+            7 => "materials/7.vmat",
+            8 => "materials/8.vmat",
+            _ => "materials/unknown.vmat"
+        };
+
+		Log.Info("Material Path: " + materialPath);
+
+        renderer.MaterialOverride = Material.Load(materialPath);
+    }
+
+    private void RevealEmptyCell(SkinnedModelRenderer renderer)
+    {
+        renderer.MaterialOverride = Material.Load("materials/empty.vmat");
+        //RevealNearbyCells();
+    }
+
+    public void Flag()
+    {
+        var renderer = GetRenderer();
+        if (renderer == null)
+        {
+            return;
+        }
+
+        if (IsHidden)
+        {
+            State = CellState.Flagged;
+            renderer.MaterialOverride = Material.Load(IsHovered ? "materials/flag_hovered.vmat" : "materials/flag.vmat");
+        }
+        else if (IsFlagged)
+        {
+            State = CellState.Hidden;
+            renderer.MaterialOverride = Material.Load(IsHovered ? "materials/unknown_hovered.vmat" : "materials/unknown.vmat");
+        }
+    }
+
+	private void RevealNearbyCells()
+	{
+		var chunk = GameObject.Parent.Parent.GetComponent<Chunk>();
+		if (chunk == null)
 		{
-			switch (Number)
-			{
-				case 1:
-					_renderer.MaterialOverride = Material.Load("materials/1.vmat");
-					break;
-				case 2:
-					_renderer.MaterialOverride = Material.Load("materials/2.vmat");
-					break;
-				case 3:
-					_renderer.MaterialOverride = Material.Load("materials/3.vmat");
-					break;
-				case 4:
-					_renderer.MaterialOverride = Material.Load("materials/4.vmat");
-					break;
-				case 5:
-					_renderer.MaterialOverride = Material.Load("materials/5.vmat");
-					break;
-				case 6:
-					_renderer.MaterialOverride = Material.Load("materials/6.vmat");
-					break;
-				case 7:
-					_renderer.MaterialOverride = Material.Load("materials/7.vmat");
-					break;
-				case 8:
-					_renderer.MaterialOverride = Material.Load("materials/8.vmat");
-					break;
-				default:
-					_renderer.MaterialOverride = Material.Load("materials/unknown.vmat");
-					break;
-			}
-			Log.Info($"Number: {Number}");
+			Log.Error("Failed to get chunk component");
 			return;
 		}
-		if (Type == CellType.Empty && Number == 0)
+		GenerateChunksForReveal(chunk);
+		var nearby = GetNearbyCells(chunk);
+		foreach (var cell in nearby)
 		{
-			//TODO: Show all nearby empty cells (recursively) and numbers
-			Log.Info($"Revealing Nearby Cells");
-			// get all cells around the current cell that are hidden and Empty
-			// var nearby = GameObject.Parent.GetComponentsInChildren<Cell>().Where(c => c.State == CellState.Hidden && c.Type == CellType.Empty && c.Number == 0);
-			// foreach (var cell in nearby)
-			// {
-			// 	if (cell.IsValid())
-			// 		cell.Show();
-			// }
-			_renderer.MaterialOverride = Material.Load("materials/empty.vmat");
-			//GameObject.Parent.Destroy();
-			return;
+			var cellComponent = cell.GetComponentInChildren<Cell>();
+			if (cellComponent.IsHidden && cellComponent.Type != CellType.Mine)
+			{
+				cellComponent.Show();
+				HUD.Instance.Score += 1;
+			}
 		}
 	}
 
-	public void Flag()
+	private void GenerateChunksForReveal(Chunk chunk)
 	{
-		if (State == CellState.Hidden)
+		if (X == 1)
+			ChunkRenderer.Instance.CreateChunk(chunk.X - 1, chunk.Z);
+		if (Z == 1)
+			ChunkRenderer.Instance.CreateChunk(chunk.X, chunk.Z - 1);
+		if (X == 1 && Z == 1)
+			ChunkRenderer.Instance.CreateChunk(chunk.X - 1, chunk.Z - 1);
+		if (X == 14)
+			ChunkRenderer.Instance.CreateChunk(chunk.X +1, chunk.Z);
+		if (Z == 14)
+			ChunkRenderer.Instance.CreateChunk(chunk.X, chunk.Z + 1);
+		if (X == 14 && Z == 14)
+			ChunkRenderer.Instance.CreateChunk(chunk.X + 1, chunk.Z + 1);
+	}
+
+	private List<GameObject> GetNearbyCells(Chunk chunk)
+	{
+		var nearby = chunk.Cells.Where(cell => {
+			var cellComponent = cell.GetComponentInChildren<Cell>();
+			if (cellComponent == null)
+			{
+				Log.Error("Failed to get cell component");
+				return false;
+			}
+			return cellComponent.X >= X - 1 && cellComponent.X <= X + 1 && cellComponent.Z >= Z - 1 && cellComponent.Z <= Z + 1 && cellComponent.Type != CellType.Mine;
+		});
+		if (X == 0 || X == 15 || Z == 0 || Z == 15)
+			nearby.Concat(GetNearbyCellsInNeighbouringChunks(chunk));
+		return nearby.ToList();
+	}
+
+	private List<GameObject> GetNearbyCellsInNeighbouringChunks(Chunk chunk)
+	{
+		var nearby = new List<GameObject>();
+		if (X == 0)
 		{
-			State = CellState.Flagged;
-			var _renderer = GameObject.GetComponents<SkinnedModelRenderer>().FirstOrDefault();
-			_renderer.MaterialOverride = Material.Load("materials/flag.vmat");
+			var leftChunk = ChunkRenderer.GetChunk(chunk.X - 1, chunk.Z);
+			if (leftChunk != null)
+			{
+				nearby.AddRange(leftChunk.Cells.Where(cell => {
+					var cellComponent = cell.GetComponentInChildren<Cell>();
+					if (cellComponent == null)
+					{
+						Log.Error("Failed to get cell component");
+						return false;
+					}
+					return cellComponent.X == 15 && cellComponent.Z >= Z - 1 && cellComponent.Z <= Z + 1 && cellComponent.Type != CellType.Mine;
+				}));
+			}
+			if (Z == 0)
+			{
+				var bottomLeftChunk = ChunkRenderer.GetChunk(chunk.X - 1, chunk.Z - 1);
+				if (bottomLeftChunk != null)
+				{
+					nearby.AddRange(bottomLeftChunk.Cells.Where(cell => {
+						var cellComponent = cell.GetComponentInChildren<Cell>();
+						if (cellComponent == null)
+						{
+							Log.Error("Failed to get cell component");
+							return false;
+						}
+						return cellComponent.X == 15 && cellComponent.Z == 15 && cellComponent.Type != CellType.Mine;
+					}));
+				}
+			}
+			if (Z == 15)
+			{
+				var topLeftChunk = ChunkRenderer.GetChunk(chunk.X - 1, chunk.Z + 1);
+				if (topLeftChunk != null)
+				{
+					nearby.AddRange(topLeftChunk.Cells.Where(cell => {
+						var cellComponent = cell.GetComponentInChildren<Cell>();
+						if (cellComponent == null)
+						{
+							Log.Error("Failed to get cell component");
+							return false;
+						}
+						return cellComponent.X == 15 && cellComponent.Z == 0 && cellComponent.Type != CellType.Mine;
+					}));
+				}
+			}
 		}
-		else if (State == CellState.Flagged)
+		if (X == 15)
 		{
-			State = CellState.Hidden;
-			var _renderer = GameObject.GetComponents<SkinnedModelRenderer>().FirstOrDefault();
-			_renderer.MaterialOverride = Material.Load("materials/unknown.vmat");
+			var rightChunk = ChunkRenderer.GetChunk(chunk.X + 1, chunk.Z);
+			if (rightChunk != null)
+			{
+				nearby.AddRange(rightChunk.Cells.Where(cell => {
+					var cellComponent = cell.GetComponentInChildren<Cell>();
+					if (cellComponent == null)
+					{
+						Log.Error("Failed to get cell component");
+						return false;
+					}
+					return cellComponent.X == 0 && cellComponent.Z >= Z - 1 && cellComponent.Z <= Z + 1 && cellComponent.Type != CellType.Mine;
+				}));
+			}
+			if (Z == 0)
+			{
+				var bottomRightChunk = ChunkRenderer.GetChunk(chunk.X + 1, chunk.Z - 1);
+				if (bottomRightChunk != null)
+				{
+					nearby.AddRange(bottomRightChunk.Cells.Where(cell => {
+						var cellComponent = cell.GetComponentInChildren<Cell>();
+						if (cellComponent == null)
+						{
+							Log.Error("Failed to get cell component");
+							return false;
+						}
+						return cellComponent.X == 0 && cellComponent.Z == 15 && cellComponent.Type != CellType.Mine;
+					}));
+				}
+			}
+			if (Z == 15)
+			{
+				var topRightChunk = ChunkRenderer.GetChunk(chunk.X + 1, chunk.Z + 1);
+				if (topRightChunk != null)
+				{
+					nearby.AddRange(topRightChunk.Cells.Where(cell => {
+						var cellComponent = cell.GetComponentInChildren<Cell>();
+						if (cellComponent == null)
+						{
+							Log.Error("Failed to get cell component");
+							return false;
+						}
+						return cellComponent.X == 0 && cellComponent.Z == 0 && cellComponent.Type != CellType.Mine;
+					}));
+				}
+			}
 		}
+		if (Z == 0)
+		{
+			var bottomChunk = ChunkRenderer.GetChunk(chunk.X, chunk.Z - 1);
+			if (bottomChunk != null)
+			{
+				nearby.AddRange(bottomChunk.Cells.Where(cell => {
+					var cellComponent = cell.GetComponentInChildren<Cell>();
+					if (cellComponent == null)
+					{
+						Log.Error("Failed to get cell component");
+						return false;
+					}
+					return cellComponent.Z == 15 && cellComponent.X >= X - 1 && cellComponent.X <= X + 1 && cellComponent.Type != CellType.Mine;
+				}));
+			}
+		}
+		if (Z == 15)
+		{
+			var topChunk = ChunkRenderer.GetChunk(chunk.X, chunk.Z + 1);
+			if (topChunk != null)
+			{
+				nearby.AddRange(topChunk.Cells.Where(cell => {
+					var cellComponent = cell.GetComponentInChildren<Cell>();
+					if (cellComponent == null)
+					{
+						Log.Error("Failed to get cell component");
+						return false;
+					}
+					return cellComponent.Z == 0 && cellComponent.X >= X - 1 && cellComponent.X <= X + 1 && cellComponent.Type != CellType.Mine;
+				}));
+			}
+		}
+		return nearby;
 	}
 }
