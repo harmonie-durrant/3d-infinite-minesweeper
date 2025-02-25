@@ -25,12 +25,6 @@ public sealed class CameraMovement : Component
         {
             return;
         }
-        if (Input.Pressed("Run"))
-        {
-            Log.Info("Run Pressed");
-            HandleMouseClick(cell => cell.ShowDebug());
-            return;
-        }
         EnsureMouseVisibility();
         HandleMovement();
         HandleMouseInput();
@@ -96,32 +90,25 @@ public sealed class CameraMovement : Component
 
     private void HandleMouseClick(Action<Cell> cellAction)
     {
-        Log.Info("Mouse Clicked");
         var tr = Scene.Trace.Ray(Scene.Camera.ScreenPixelToRay(Mouse.Position), 1000).Run();
         if (!tr.Hit)
         {
-            Log.Info("No Hit" + tr.EndPosition);
             return;
         }
         if (tr.GameObject == null)
         {
-            Log.Info("No GameObject found");
             return;
         }
         var chunk = tr.GameObject.GetComponents<Chunk>().FirstOrDefault();
         if (chunk == null)
         {
-            Log.Info("Chunk not found");
             return;
         }
-        Log.Info($"Chunk found ({chunk.WorldPosition})");
         var cell = chunk.GetCell(tr.EndPosition);
         if (cell == null)
         {
-            Log.Info("No cell found");
             return;
         }
-        Log.Info($"Cell found ({cell.WorldPosition})");
         cellAction(cell);
         return;
     }

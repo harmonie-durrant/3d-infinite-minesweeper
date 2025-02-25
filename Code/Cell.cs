@@ -91,44 +91,24 @@ public sealed class Cell : Component
 		}).ToList();
 	}
 
-	public void ShowDebug()
-	{
-		var nearby = GetNearbyCells();
-		Log.Info($"Found {nearby.Count()} nearby cells (DEBUG)");
-		foreach (var cell in nearby)
-		{
-			var cellComponent = cell.GetComponentInChildren<Cell>();
-			if (cellComponent == null)
-			{
-				Log.Error("Failed to get cell component");
-				return;
-			}
-			// set Tint to green
-			cell.GameObject.GetComponent<SkinnedModelRenderer>().Tint = Color.Green;
-		}
-	}
-
     public void Show()
     {
         if (IsShown || IsFlagged)
         {
-			Log.Info("Failed to show cell: already shown or flagged");
-            return;
+			return;
         }
 
         var renderer = GetRenderer();
         if (renderer == null)
         {
-			Log.Info("Failed to show cell: failed to get renderer");
-            return;
+			return;
         }
 
         State = CellState.Shown;
 
         if (IsMine)
         {
-			Log.Info("Is a mine");
-            HandleMineCell(renderer);
+			HandleMineCell(renderer);
             return;
         }
 
@@ -136,15 +116,13 @@ public sealed class Cell : Component
 
         if (IsNumber || Number > 0)
         {
-			Log.Info("Is a Number");
-            SetNumberMaterial(renderer);
+			SetNumberMaterial(renderer);
             return;
         }
 
         if (IsEmpty && Number == 0)
         {
-			Log.Info("Is Empty");
-            RevealEmptyCell(renderer);
+			RevealEmptyCell(renderer);
         }
     }
 
@@ -225,9 +203,7 @@ public sealed class Cell : Component
             _ => "materials/unknown.vmat"
         };
 
-		Log.Info("Material Path: " + materialPath);
-
-        renderer.MaterialOverride = Material.Load(materialPath);
+		renderer.MaterialOverride = Material.Load(materialPath);
     }
 
     private void RevealEmptyCell(SkinnedModelRenderer renderer)

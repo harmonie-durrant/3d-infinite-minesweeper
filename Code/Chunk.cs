@@ -125,7 +125,6 @@ public sealed class Chunk : Component
                 return c.GameObject.WorldPosition.Distance(cell.WorldPosition) <= 75 && c.GameObject.WorldPosition.Distance(cell.WorldPosition) > 1;
             });
             cell_comp.Number = nearby.Count(c => c.Type == CellType.Mine);
-            Log.Info($"{cell_comp.GameObject.Name} has {cell_comp.Number} mines around it");
             cell_comp.Type = (cell_comp.Number == 0) ? CellType.Empty : CellType.Number;
         }
     }

@@ -3,7 +3,7 @@ using Sandbox;
 public sealed class ChunkRenderer : Component
 {
     [Property] public GameObject prefab_chunk { get; set; }
-    public int RenderDistance { get; set; } = 1; // 1x1 grid of chunks
+    public int RenderDistance { get; set; } = 2;
 
 	public static ChunkRenderer Instance {
 		get
