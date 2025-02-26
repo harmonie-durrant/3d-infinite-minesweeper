@@ -1,7 +1,7 @@
 {
   "Title": "3D Infinite Minesweeper ",
   "Type": "game",
-  "Org": "sandrpdev",
+  "Org": "clearly",
   "Ident": "3d_infinite_minesweeper",
   "Schema": 1,
   "IncludeSourceFiles": false,
