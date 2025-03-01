@@ -105,11 +105,7 @@ public sealed class CameraMovement : Component
             return;
         }
         var cell = chunk.GetCell(tr.EndPosition);
-        if (cell == null)
-        {
-            return;
-        }
-        cellAction(cell);
-        return;
+        if (cell != null)
+            cellAction(cell);
     }
 }

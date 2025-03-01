@@ -17,8 +17,8 @@ public enum CellType
 
 public sealed class Cell : Component
 {
-	public int X { get; set; } = 0;
-	public int Z { get; set; } = 0;
+	public int X { get; set; } = -1;
+	public int Z { get; set; } = -1;
     public CellState State { get; set; } = CellState.Hidden;
     public CellType Type { get; set; } = CellType.Empty;
     public int Number { get; set; } = 0;
@@ -39,6 +39,12 @@ public sealed class Cell : Component
 	public bool IsNumber => Type == CellType.Number;
 
 	#endregion
+
+	override protected void OnStart()
+	{
+		X = ((int)GameObject.LocalPosition.x + 400) / 50;
+		Z = (350 - (int)GameObject.LocalPosition.z) / 50;
+	}
 
 	public void ActivateHover()
 	{
@@ -122,7 +128,10 @@ public sealed class Cell : Component
 
         if (IsEmpty && Number == 0)
         {
-			RevealEmptyCell(renderer);
+			if (Number == 0)
+				RevealEmptyCell(renderer);
+			else
+				Log.Error("Empty cell has number");
         }
     }
 
@@ -209,7 +218,7 @@ public sealed class Cell : Component
     private void RevealEmptyCell(SkinnedModelRenderer renderer)
     {
         renderer.MaterialOverride = Material.Load("materials/empty.vmat");
-        //RevealNearbyCells();
+        RevealNearbyCells();
     }
 
     public void Flag()
@@ -234,20 +243,21 @@ public sealed class Cell : Component
 
 	private void RevealNearbyCells()
 	{
-		var chunk = GameObject.Parent.Parent.GetComponent<Chunk>();
+		var chunk = GameObject.Parent.GetComponent<Chunk>();
 		if (chunk == null)
 		{
 			Log.Error("Failed to get chunk component");
 			return;
 		}
-		GenerateChunksForReveal(chunk);
-		var nearby = GetNearbyCells(chunk);
+		//GenerateChunksForReveal(chunk);
+		var nearby = Game.ActiveScene.GetAllComponents<Cell>().Where(cell => {
+			return cell.WorldPosition.Distance(WorldPosition) <= 75 && cell.WorldPosition.Distance(WorldPosition) > 1;
+		});
 		foreach (var cell in nearby)
 		{
-			var cellComponent = cell.GetComponentInChildren<Cell>();
-			if (cellComponent.IsHidden && cellComponent.Type != CellType.Mine)
+			if (cell.IsHidden && cell.Type != CellType.Mine)
 			{
-				cellComponent.Show();
+				cell.Show();
 				HUD.Instance.Score += 1;
 			}
 		}
@@ -269,38 +279,26 @@ public sealed class Cell : Component
 			ChunkRenderer.Instance.CreateChunk(chunk.X + 1, chunk.Z + 1);
 	}
 
-	private List<GameObject> GetNearbyCells(Chunk chunk)
+	private List<Cell> GetNearbyCells(Chunk chunk)
 	{
 		var nearby = chunk.Cells.Where(cell => {
-			var cellComponent = cell.GetComponentInChildren<Cell>();
-			if (cellComponent == null)
-			{
-				Log.Error("Failed to get cell component");
-				return false;
-			}
-			return cellComponent.X >= X - 1 && cellComponent.X <= X + 1 && cellComponent.Z >= Z - 1 && cellComponent.Z <= Z + 1 && cellComponent.Type != CellType.Mine;
+			return cell.X >= X - 1 && cell.X <= X + 1 && cell.Z >= Z - 1 && cell.Z <= Z + 1 && cell.Type != CellType.Mine;
 		});
 		if (X == 0 || X == 15 || Z == 0 || Z == 15)
 			nearby.Concat(GetNearbyCellsInNeighbouringChunks(chunk));
 		return nearby.ToList();
 	}
 
-	private List<GameObject> GetNearbyCellsInNeighbouringChunks(Chunk chunk)
+	private List<Cell> GetNearbyCellsInNeighbouringChunks(Chunk chunk)
 	{
-		var nearby = new List<GameObject>();
+		var nearby = new List<Cell>();
 		if (X == 0)
 		{
 			var leftChunk = ChunkRenderer.GetChunk(chunk.X - 1, chunk.Z);
 			if (leftChunk != null)
 			{
 				nearby.AddRange(leftChunk.Cells.Where(cell => {
-					var cellComponent = cell.GetComponentInChildren<Cell>();
-					if (cellComponent == null)
-					{
-						Log.Error("Failed to get cell component");
-						return false;
-					}
-					return cellComponent.X == 15 && cellComponent.Z >= Z - 1 && cellComponent.Z <= Z + 1 && cellComponent.Type != CellType.Mine;
+					return cell.X == 15 && cell.Z >= Z - 1 && cell.Z <= Z + 1 && cell.Type != CellType.Mine;
 				}));
 			}
 			if (Z == 0)
@@ -309,13 +307,7 @@ public sealed class Cell : Component
 				if (bottomLeftChunk != null)
 				{
 					nearby.AddRange(bottomLeftChunk.Cells.Where(cell => {
-						var cellComponent = cell.GetComponentInChildren<Cell>();
-						if (cellComponent == null)
-						{
-							Log.Error("Failed to get cell component");
-							return false;
-						}
-						return cellComponent.X == 15 && cellComponent.Z == 15 && cellComponent.Type != CellType.Mine;
+						return cell.X == 15 && cell.Z == 15 && cell.Type != CellType.Mine;
 					}));
 				}
 			}
@@ -325,13 +317,7 @@ public sealed class Cell : Component
 				if (topLeftChunk != null)
 				{
 					nearby.AddRange(topLeftChunk.Cells.Where(cell => {
-						var cellComponent = cell.GetComponentInChildren<Cell>();
-						if (cellComponent == null)
-						{
-							Log.Error("Failed to get cell component");
-							return false;
-						}
-						return cellComponent.X == 15 && cellComponent.Z == 0 && cellComponent.Type != CellType.Mine;
+						return cell.X == 15 && cell.Z == 0 && cell.Type != CellType.Mine;
 					}));
 				}
 			}
@@ -342,13 +328,7 @@ public sealed class Cell : Component
 			if (rightChunk != null)
 			{
 				nearby.AddRange(rightChunk.Cells.Where(cell => {
-					var cellComponent = cell.GetComponentInChildren<Cell>();
-					if (cellComponent == null)
-					{
-						Log.Error("Failed to get cell component");
-						return false;
-					}
-					return cellComponent.X == 0 && cellComponent.Z >= Z - 1 && cellComponent.Z <= Z + 1 && cellComponent.Type != CellType.Mine;
+					return cell.X == 0 && cell.Z >= Z - 1 && cell.Z <= Z + 1 && cell.Type != CellType.Mine;
 				}));
 			}
 			if (Z == 0)
@@ -357,13 +337,7 @@ public sealed class Cell : Component
 				if (bottomRightChunk != null)
 				{
 					nearby.AddRange(bottomRightChunk.Cells.Where(cell => {
-						var cellComponent = cell.GetComponentInChildren<Cell>();
-						if (cellComponent == null)
-						{
-							Log.Error("Failed to get cell component");
-							return false;
-						}
-						return cellComponent.X == 0 && cellComponent.Z == 15 && cellComponent.Type != CellType.Mine;
+						return cell.X == 0 && cell.Z == 15 && cell.Type != CellType.Mine;
 					}));
 				}
 			}
@@ -373,13 +347,7 @@ public sealed class Cell : Component
 				if (topRightChunk != null)
 				{
 					nearby.AddRange(topRightChunk.Cells.Where(cell => {
-						var cellComponent = cell.GetComponentInChildren<Cell>();
-						if (cellComponent == null)
-						{
-							Log.Error("Failed to get cell component");
-							return false;
-						}
-						return cellComponent.X == 0 && cellComponent.Z == 0 && cellComponent.Type != CellType.Mine;
+						return cell.X == 0 && cell.Z == 0 && cell.Type != CellType.Mine;
 					}));
 				}
 			}
@@ -390,13 +358,7 @@ public sealed class Cell : Component
 			if (bottomChunk != null)
 			{
 				nearby.AddRange(bottomChunk.Cells.Where(cell => {
-					var cellComponent = cell.GetComponentInChildren<Cell>();
-					if (cellComponent == null)
-					{
-						Log.Error("Failed to get cell component");
-						return false;
-					}
-					return cellComponent.Z == 15 && cellComponent.X >= X - 1 && cellComponent.X <= X + 1 && cellComponent.Type != CellType.Mine;
+					return cell.Z == 15 && cell.X >= X - 1 && cell.X <= X + 1 && cell.Type != CellType.Mine;
 				}));
 			}
 		}
@@ -406,13 +368,7 @@ public sealed class Cell : Component
 			if (topChunk != null)
 			{
 				nearby.AddRange(topChunk.Cells.Where(cell => {
-					var cellComponent = cell.GetComponentInChildren<Cell>();
-					if (cellComponent == null)
-					{
-						Log.Error("Failed to get cell component");
-						return false;
-					}
-					return cellComponent.Z == 0 && cellComponent.X >= X - 1 && cellComponent.X <= X + 1 && cellComponent.Type != CellType.Mine;
+					return cell.Z == 0 && cell.X >= X - 1 && cell.X <= X + 1 && cell.Type != CellType.Mine;
 				}));
 			}
 		}

@@ -8,8 +8,7 @@ public sealed class Chunk : Component
     [Property] public int X { get; set; }
     [Property] public int Z { get; set; }
     // 16x16 grid of cells
-    [Property] public List<GameObject> Cells { get; set; } = new List<GameObject>();
-    [Property] public GameObject prefab_cell { get; set; }
+    [Property] public List<Cell> Cells { get; set; } = new List<Cell>();
 
     public static Chunk Instance {
         get
@@ -34,56 +33,44 @@ public sealed class Chunk : Component
     private void GenerateCells()
     {
         var random = new Random();
-        for (int z = 0; z < 16; z++)
+
+        var objs = GameObject.GetComponentsInChildren<Cell>().ToList();
+        if (objs.Count == 0)
         {
-            for (int x = 0; x < 16; x++)
+            Log.Error("Failed to get cell objects");
+            return;
+        }
+        foreach (var obj in objs)
+        {
+            Cells.Add(obj);
+            if (random.Next(0, 100) < 20)
             {
-                var obj = prefab_cell.Clone();
-                obj.Name = $"Cell-{X},{Z}/{x},{z}";
-                obj.LocalPosition = new Vector3((x * 50) - (8 * 50), 0, (z * 50) - (8 * 50));
-                obj.Parent = GameObject;
-                Cells.Add(obj);
-                var cell = obj.GetComponentInChildren<Cell>();
-                if (cell == null)
-                {
-                    Log.Error("Failed to get cell component");
-                    return;
-                }
-                if (random.Next(0, 100) < 20)
-                {
-                    cell.Type = CellType.Mine;
-                    continue;
-                }
-                cell.Type = CellType.Number;
-                cell.Number = -1;
-                cell.X = x;
-                cell.Z = z;
+                obj.Type = CellType.Mine;
             }
         }
-        UpdateChunkBorders();
+        if (Cells.Count == 0)
+        {
+            Log.Error("Failed to generate cells");
+            return;
+        }
     }
 
     private void CalculateMinesAroundCells()
     {
         foreach (var cell in Cells)
         {
-            var cell_comp = cell.GetComponentInChildren<Cell>();
-            if (cell_comp == null)
-            {
-                Log.Error("Failed to get cell component");
-                return;
-            }
-            if (cell_comp.Type == CellType.Mine)
+            if (cell.Type == CellType.Mine)
             {
                 continue;
             }
             var nearby = Cells.Where(c => c.LocalPosition.Distance(cell.LocalPosition) <= 75 && c.LocalPosition.Distance(cell.LocalPosition) > 0);
-            cell_comp.Number = nearby.Count(c => c.GetComponentInChildren<Cell>().Type == CellType.Mine);
-            if (cell_comp.Number == 0)
+            cell.Number = nearby.Count(c => c.Type == CellType.Mine);
+            if (cell.Number == 0)
             {
-                cell_comp.Type = CellType.Empty;
+                cell.Type = CellType.Empty;
             }
         }
+        UpdateChunkBorders();
     }
 
     private void UpdateChunkBorders()
@@ -111,62 +98,49 @@ public sealed class Chunk : Component
     private void UpdateChunkBorder()
     {
         var border_cells = Cells.Where(c => {
-            var cell = c.GetComponentInChildren<Cell>();
-            return cell != null && (cell.X == 0 || cell.X == 15 || cell.Z == 0 || cell.Z == 15);
+            return c != null && (c.X == 0 || c.X == 15 || c.Z == 0 || c.Z == 15);
         });
         foreach (var cell in border_cells)
         {
-            var cell_comp = cell.GetComponentInChildren<Cell>();
-            if (cell_comp == null || cell_comp.Type == CellType.Mine)
-            {
-                continue;
-            }
             var nearby = Game.ActiveScene.GetAllComponents<Cell>().Where(c => {
                 return c.GameObject.WorldPosition.Distance(cell.WorldPosition) <= 75 && c.GameObject.WorldPosition.Distance(cell.WorldPosition) > 1;
             });
-            cell_comp.Number = nearby.Count(c => c.Type == CellType.Mine);
-            cell_comp.Type = (cell_comp.Number == 0) ? CellType.Empty : CellType.Number;
+            cell.Number = nearby.Count(c => c.Type == CellType.Mine);
+            cell.Type = (cell.Number == 0) ? CellType.Empty : CellType.Number;
         }
     }
 
     public Cell GetCell(Vector3 position)
     {
-        var localx = position.x - GameObject.LocalPosition.x;
-        var localz = position.z - GameObject.LocalPosition.z;
-        var x = (int)Math.Floor((localx + 25) / 50);
-        var z = (int)Math.Floor((localz + 25) / 50);
-        var cell = Cells.FirstOrDefault(c => c.LocalPosition.x == x * 50 && c.LocalPosition.z == z * 50);
+        var localx = position.x - GameObject.WorldPosition.x;
+        var localz = position.z - GameObject.WorldPosition.z;
+        // round to nearest 50
+        localx = (int)Math.Round(localx / 50) * 50;
+        localz = (int)Math.Round(localz / 50) * 50;
+        var cell = Cells.FirstOrDefault(c => c.LocalPosition.x == localx && c.LocalPosition.z == localz);
         if (cell == null)
         {
-            Log.Error("Failed to get cell at position");
+            Log.Error($"Failed to get cell at position {localx},{localz}");
             return null;
         }
-        return cell.GetComponentInChildren<Cell>();
+        return cell;
     }
 
     public Cell GetCellFromGrid(int x, int z)
     {
-        var cell = Cells.FirstOrDefault(c => {
-            var cell_comp = c.GetComponentInChildren<Cell>();
-            if (cell_comp == null)
-            {
-                Log.Error("Failed to get cell component");
-                return false;
-            }
-            return cell_comp.X == x && cell_comp.Z == z;
-        });
-        if (cell == null)
+        var cell_comp = Cells.FirstOrDefault(c => c.X == x && c.Z == z);
+        if (cell_comp == null)
         {
-            Log.Error("Failed to get cell at position");
+            Log.Error($"Failed to get cell at position {x},{z}");
             return null;
         }
-        return cell.GetComponentInChildren<Cell>();
+        return cell_comp;
     }
 
     public void Update()
     {
         var camera = Scene.Camera;
-        if (camera.WorldPosition.Distance(GameObject.WorldPosition) < 1500)
+        if (camera.WorldPosition.Distance(GameObject.WorldPosition) < 1000)
         {
             GameObject.Enabled = true;
         }
