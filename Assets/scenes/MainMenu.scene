@@ -21,6 +21,12 @@
           "Opacity": 1,
           "Scale": 1,
           "ScaleStrategy": "ConsistentHeight",
+          "TargetCamera": {
+            "_type": "component",
+            "component_id": "1f1e7fc2-0535-414d-8745-88a6c627f912",
+            "go": "425bc0af-680c-4dfe-a296-2bb77486005d",
+            "component_type": "CameraComponent"
+          },
           "ZIndex": 100
         },
         {
@@ -32,6 +38,40 @@
           "OnComponentFixedUpdate": null,
           "OnComponentStart": null,
           "OnComponentUpdate": null
+        }
+      ]
+    },
+    {
+      "__guid": "425bc0af-680c-4dfe-a296-2bb77486005d",
+      "Flags": 0,
+      "Name": "Camera",
+      "Position": "-205.3884,-374.0817,-32.4549",
+      "Tags": "maincamera",
+      "Enabled": true,
+      "Components": [
+        {
+          "__type": "Sandbox.CameraComponent",
+          "__guid": "1f1e7fc2-0535-414d-8745-88a6c627f912",
+          "BackgroundColor": "0.33333,0.46275,0.52157,1",
+          "ClearFlags": "All",
+          "FieldOfView": 60,
+          "FovAxis": "Horizontal",
+          "IsMainCamera": true,
+          "OnComponentDestroy": null,
+          "OnComponentDisabled": null,
+          "OnComponentEnabled": null,
+          "OnComponentFixedUpdate": null,
+          "OnComponentStart": null,
+          "OnComponentUpdate": null,
+          "Orthographic": false,
+          "OrthographicHeight": 1204,
+          "Priority": 1,
+          "RenderExcludeTags": "",
+          "RenderTags": "",
+          "TargetEye": "None",
+          "Viewport": "0,0,1,1",
+          "ZFar": 10000,
+          "ZNear": 10
         }
       ]
     }

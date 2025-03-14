@@ -113,6 +113,7 @@
           "BackgroundColor": "0.33333,0.46275,0.52157,1",
           "ClearFlags": "All",
           "FieldOfView": 90,
+          "FovAxis": "Horizontal",
           "IsMainCamera": true,
           "OnComponentDestroy": null,
           "OnComponentDisabled": null,
@@ -178,7 +179,7 @@
         {
           "__type": "Sandbox.Tonemapping",
           "__guid": "9d76f362-7227-40eb-a189-69353c780c46",
-          "__version": 1,
+          "__version": 2,
           "__enabled": false,
           "AutoExposureEnabled": true,
           "ExposureBias": 2,
@@ -186,7 +187,7 @@
           "ExposureMethod": "RGB",
           "MaximumExposure": 2,
           "MinimumExposure": 1,
-          "Mode": "Legacy",
+          "Mode": "HableFilmic",
           "OnComponentDestroy": null,
           "OnComponentDisabled": null,
           "OnComponentEnabled": null,
@@ -259,6 +260,12 @@
               "Opacity": 1,
               "Scale": 1,
               "ScaleStrategy": "ConsistentHeight",
+              "TargetCamera": {
+                "_type": "component",
+                "component_id": "cf3cbf96-22b6-4be4-a5d0-672a96c17f9f",
+                "go": "3ee1c9f4-07be-4e0b-8b23-67bee2d8ec8a",
+                "component_type": "CameraComponent"
+              },
               "ZIndex": 100
             },
             {
@@ -279,8 +286,7 @@
               "OnComponentEnabled": null,
               "OnComponentFixedUpdate": null,
               "OnComponentStart": null,
-              "OnComponentUpdate": null,
-              "Show": true
+              "OnComponentUpdate": null
             }
           ]
         }
