@@ -1,152 +1,168 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-using Sandbox;
-
 public sealed class Chunk : Component
 {
-    [Property] public int X { get; set; }
-    [Property] public int Z { get; set; }
-    // 16x16 grid of cells
-    [Property] public List<Cell> Cells { get; set; } = new List<Cell>();
+    public const int SIZE = 16; // 16x16 grid
+    public Vector2Int ChunkPosition { get; set; } // (ChunkX, ChunkY)
+    public GameObject CellPrefab { get; set; }   // Assign this in Inspector
+    public Dictionary<Vector2Int, Cell> Cells { get; set; } = new();
 
-    public static Chunk Instance {
-        get
-        {
-            if ( !_instance.IsValid() )
-            {
-                _instance = Game.ActiveScene.GetAllComponents<Chunk>().FirstOrDefault();
-            }
-            return _instance;
-        }
-    }
-    private static Chunk _instance { get; set; } = null;
-
-    protected override void OnStart()
+    public void GenerateCells()
     {
-        base.OnStart();
-
-        GenerateCells();
-        CalculateMinesAroundCells();
-    }
-
-    private void GenerateCells()
-    {
-        var random = new Random();
-
-        var objs = GameObject.GetComponentsInChildren<Cell>().ToList();
-        if (objs.Count == 0)
+        for (int x = 0; x < SIZE; x++)
         {
-            Log.Error("Failed to get cell objects");
-            return;
-        }
-        foreach (var obj in objs)
-        {
-            Cells.Add(obj);
-            if (random.Next(0, 100) < 20)
+            for (int y = 0; y < SIZE; y++)
             {
-                obj.Type = CellType.Mine;
+                var localPos = new Vector2Int(x, y);
+                GameObject newCellObject = CellPrefab.Clone();
+                newCellObject.Parent = GameObject; // Set the parent to this chunk
+                newCellObject.LocalPosition = new Vector3(x * Cell.SIZE, y * Cell.SIZE, 0); // Adjust the spacing as needed
+                newCellObject.LocalPosition += new Vector3(Cell.SIZE / 2, Cell.SIZE / 2, 0); // Center the cell in it's position
+                Cell newCell = newCellObject.GetComponent<Cell>();
+                newCell.Position = localPos;
+                newCell.ParentChunk = this;
+                Cells[localPos] = newCell;
+                newCellObject.NetworkSpawn(); // Spawn the cell object in the network
+                newCell.SpriteRenderer = newCellObject.GetOrAddComponent<SpriteRenderer>();
+                newCell.SpriteRenderer.Texture = Texture.Load(SpriteBank.Sprites["unknown"]);
             }
         }
-        if (Cells.Count == 0)
+    }
+
+    public void PlaceMines(int mineCount, Vector2Int safeZone)
+    {
+        List<Cell> validCells = Cells.Values.Where(c => c.Position.Distance(safeZone) > WorldManager.SAFE_SIZE).ToList();
+        Random random = new();
+
+        for (int i = 0; i < mineCount && validCells.Count > 0; i++)
         {
-            Log.Error("Failed to generate cells");
-            return;
+            int index = random.Next(validCells.Count);
+            Cell mineCell = validCells[index];
+            mineCell.IsMine = true;
+            validCells.RemoveAt(index);
+        }
+
+        UpdateMineCounts();
+        //Get all neighboring chunks and update their mine counts too
+        foreach (var offset in GetNeighborOffsets())
+        {
+            Vector2Int neighborPos = ChunkPosition + offset;
+            Chunk neighboringChunk = WorldManager.Instance.GetChunk(neighborPos);
+            if (neighboringChunk != null)
+            {
+                neighboringChunk.UpdateMineCounts();
+            }
         }
     }
 
-    private void CalculateMinesAroundCells()
+    private void UpdateMineCounts()
     {
-        foreach (var cell in Cells)
+        foreach (var cell in Cells.Values)
         {
-            if (cell.Type == CellType.Mine)
+            var old = cell.NeighborMineCount;
+            cell.NeighborMineCount = GetNeighboringMines(cell.Position); // Count the mines around this cell
+            if (old != cell.NeighborMineCount)
+                cell.UpdateVisuals(); // Update the visuals for the cell if the count changed
+        }
+    }
+
+    private int GetNeighboringMines(Vector2Int pos)
+    {
+        int count = 0;
+
+        foreach (var offset in GetNeighborOffsets())
+        {
+            Vector2Int neighborPos = pos + offset;
+
+            // Check if the neighbor is within the current chunk
+            if (Cells.ContainsKey(neighborPos))
             {
+                if (Cells[neighborPos].IsMine)
+                    count++;
                 continue;
             }
-            var nearby = Cells.Where(c => c.LocalPosition.Distance(cell.LocalPosition) <= 75 && c.LocalPosition.Distance(cell.LocalPosition) > 0);
-            cell.Number = nearby.Count(c => c.Type == CellType.Mine);
-            if (cell.Number == 0)
+
+            // Handle neighbors outside the current chunk
+            Vector2Int wrappedNeighborPos = WrapPositionWithinChunk(neighborPos);
+            Vector2Int chunkOffset = GetChunkOffset(neighborPos);
+
+            // Check the neighboring chunk
+            Chunk neighboringChunk = WorldManager.Instance.GetChunk(ChunkPosition + chunkOffset);
+            if (neighboringChunk != null && neighboringChunk.Cells.ContainsKey(wrappedNeighborPos))
             {
-                cell.Type = CellType.Empty;
+                if (neighboringChunk.Cells[wrappedNeighborPos].IsMine)
+                    count++;
             }
         }
-        UpdateChunkBorders();
+
+        return count;
     }
 
-    private void UpdateChunkBorders()
+    private Vector2Int WrapPositionWithinChunk(Vector2Int pos)
     {
-        var nearby_chunks = new List<Chunk>
-		{
-			ChunkRenderer.GetChunk( X - 1, Z ),
-			ChunkRenderer.GetChunk( X + 1, Z ),
-			ChunkRenderer.GetChunk( X, Z - 1 ),
-			ChunkRenderer.GetChunk( X, Z + 1 ),
-			ChunkRenderer.GetChunk( X + 1, Z + 1 ),
-			ChunkRenderer.GetChunk( X - 1, Z - 1 ),
-			ChunkRenderer.GetChunk( X + 1, Z - 1 ),
-			ChunkRenderer.GetChunk( X - 1, Z + 1 )
-		};
-        foreach (var chunk in nearby_chunks)
+        // Wrap the position to stay within the bounds of the chunk
+        int x = (pos.x < 0) ? SIZE - 1 : (pos.x >= SIZE) ? 0 : pos.x;
+        int y = (pos.y < 0) ? SIZE - 1 : (pos.y >= SIZE) ? 0 : pos.y;
+        return new Vector2Int(x, y);
+    }
+
+    private Vector2Int GetChunkOffset(Vector2Int pos)
+    {
+        // Determine the chunk offset based on the position
+        int offsetX = (pos.x < 0) ? -1 : (pos.x >= SIZE) ? 1 : 0;
+        int offsetY = (pos.y < 0) ? -1 : (pos.y >= SIZE) ? 1 : 0;
+        return new Vector2Int(offsetX, offsetY);
+    }
+
+    public void RevealEmptyArea(Vector2Int startPos)
+    {
+        if (!Cells.ContainsKey(startPos) || Cells[startPos].IsMine)
         {
-            if (chunk != null)
+            //Log.Info("Cannot reveal empty areas yet (not implemented).");
+            return;
+        }
+        Queue<Cell> queue = new();
+        HashSet<Cell> visited = new();
+        queue.Enqueue(Cells[startPos]);
+
+        while (queue.Count > 0)
+        {
+            Cell cell = queue.Dequeue();
+            if (visited.Contains(cell) || cell.IsMine) continue;
+            visited.Add(cell);
+            cell.Reveal();
+
+            if (cell.NeighborMineCount == 0)
             {
-                chunk.UpdateChunkBorder();
+                foreach (var offset in GetNeighborOffsets())
+                {
+                    Vector2Int neighborPos = cell.Position + offset;
+                    if (Cells.ContainsKey(neighborPos) && !visited.Contains(Cells[neighborPos]))
+                        queue.Enqueue(Cells[neighborPos]);
+                    // TODO: Get neighbor chunks too
+                }
             }
         }
     }
 
-    private void UpdateChunkBorder()
+    private static List<Vector2Int> GetNeighborOffsets()
     {
-        var border_cells = Cells.Where(c => {
-            return c != null && (c.X == 0 || c.X == 15 || c.Z == 0 || c.Z == 15);
-        });
-        foreach (var cell in border_cells)
+        return new()
         {
-            var nearby = Game.ActiveScene.GetAllComponents<Cell>().Where(c => {
-                return c.GameObject.WorldPosition.Distance(cell.WorldPosition) <= 75 && c.GameObject.WorldPosition.Distance(cell.WorldPosition) > 1;
-            });
-            cell.Number = nearby.Count(c => c.Type == CellType.Mine);
-            cell.Type = (cell.Number == 0) ? CellType.Empty : CellType.Number;
-        }
+            new Vector2Int(-1, -1), new Vector2Int(0, -1), new Vector2Int(1, -1),
+            new Vector2Int(-1,  0),                      new Vector2Int(1,  0),
+            new Vector2Int(-1,  1), new Vector2Int(0,  1), new Vector2Int(1,  1)
+        };
     }
 
-    public Cell GetCell(Vector3 position)
+    public Cell GetCell(Vector3 worldPosition)
     {
-        var localx = position.x - GameObject.WorldPosition.x;
-        var localz = position.z - GameObject.WorldPosition.z;
-        // round to nearest 50
-        localx = (int)Math.Round(localx / 50) * 50;
-        localz = (int)Math.Round(localz / 50) * 50;
-        var cell = Cells.FirstOrDefault(c => c.LocalPosition.x == localx && c.LocalPosition.z == localz);
-        if (cell == null)
-        {
-            Log.Error($"Failed to get cell at position {localx},{localz}");
-            return null;
-        }
-        return cell;
+        Vector2Int localPos = WorldToLocalPosition(worldPosition);
+        return Cells.TryGetValue(localPos, out var cell) ? cell : null;
     }
 
-    public Cell GetCellFromGrid(int x, int z)
+    private Vector2Int WorldToLocalPosition(Vector3 worldPosition)
     {
-        var cell_comp = Cells.FirstOrDefault(c => c.X == x && c.Z == z);
-        if (cell_comp == null)
-        {
-            Log.Error($"Failed to get cell at position {x},{z}");
-            return null;
-        }
-        return cell_comp;
-    }
-
-    public void Update()
-    {
-        var camera = Scene.Camera;
-        if (camera.WorldPosition.Distance(GameObject.WorldPosition) < 1000)
-        {
-            GameObject.Enabled = true;
-        }
-        else
-        {
-            GameObject.Enabled = false;
-        }
+        int x = (int)(worldPosition.x % SIZE);
+        int y = (int)(worldPosition.y % SIZE);
+        return new Vector2Int(x, y);
     }
 }

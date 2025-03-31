@@ -3,9 +3,12 @@ using Sandbox;
 public sealed class CameraMovement : Component
 {
     [Property] public float MoveSpeed { get; set; } = 100f;
-    [Property] public ChunkRenderer _renderer { get; set; }
+    [Property] public GameOver GameOver { get; set; }
     public bool IsGameOver { get; set; } = false;
-    public Cell PreviousHover { get; set; } = null;
+    public bool FirstClick { get; set; } = true;
+
+    private Queue<Vector2Int> chunkLoadQueue = new Queue<Vector2Int>();
+    public RealTimeUntil ChunkLoadingDelay { get; set; } = 0.2f; // Delay between chunk loads
 
     public static CameraMovement Instance {
         get
@@ -19,15 +22,43 @@ public sealed class CameraMovement : Component
     }
     private static CameraMovement _instance { get; set; } = null;
 
+    protected override void OnAwake()
+    {
+        base.OnAwake();
+        _instance = this;
+
+        MoveCamera(Vector3.Zero); // Initialize camera position
+        GameObject.WorldPosition = new Vector3(0, 0, 500); // Set initial camera position
+    }
+
     protected override void OnUpdate()
     {
+        base.OnUpdate();
         if (IsGameOver)
         {
+            if (GameOver.IsValid())
+                GameOver.Show = true;
             return;
         }
         EnsureMouseVisibility();
         HandleMovement();
         HandleMouseInput();
+    }
+
+    protected override void OnFixedUpdate()
+    {
+        base.OnFixedUpdate();
+
+        // Load one chunk per FixedUpdate frame
+        if (ChunkLoadingDelay)
+        {
+            if (chunkLoadQueue.Count > 0)
+            {
+                Vector2Int chunkToLoad = chunkLoadQueue.Dequeue();
+                WorldManager.Instance.GetOrCreateChunk(chunkToLoad);
+            }
+            ChunkLoadingDelay = 0.2f; // Reset the delay
+        }
     }
 
     private void EnsureMouseVisibility()
@@ -42,69 +73,90 @@ public sealed class CameraMovement : Component
     private void HandleMovement()
     {
         if (Input.Down("Forward"))
-        {
-            MoveCamera(Vector3.Up);
-        }
+            MoveCamera(new Vector3(1, 0, 0));
         if (Input.Down("Backward"))
-        {
-            MoveCamera(Vector3.Down);
-        }
+            MoveCamera(new Vector3(-1, 0, 0));
         if (Input.Down("Left"))
-        {
-            MoveCamera(Vector3.Backward);
-        }
+            MoveCamera(new Vector3(0, 1, 0));
         if (Input.Down("Right"))
-        {
-            MoveCamera(Vector3.Forward);
-        }
+            MoveCamera(new Vector3(0, -1, 0));
+        // TODO: Add camera zoom controls (max zoom, min zoom, etc.)
     }
 
     private void MoveCamera(Vector3 direction)
     {
+        // TODO: Limit movement to the explored grid (e.g., within the bounds of the revieled cells)
         GameObject.WorldPosition += direction * Time.Delta * MoveSpeed;
-        //TODO: Limit movement to the explored grid
-        _renderer.UpdateChunks();
+
+        // Calculate the 9 chunk positions around the camera
+        HashSet<Vector2Int> chunksToKeepLoaded = new HashSet<Vector2Int>();
+        for (int dx = -2; dx <= 2; dx++)
+        {
+            for (int dy = -2; dy <= 2; dy++)
+            {
+                Vector2Int chunkPos = new Vector2Int(
+                    (int)(GameObject.WorldPosition.x / (Chunk.SIZE * Cell.SIZE)) + dx,
+                    (int)(GameObject.WorldPosition.y / (Chunk.SIZE * Cell.SIZE)) + dy
+                );
+
+                // Add the chunk position to the queue if not already loaded
+                if (!WorldManager.Instance.IsChunkLoaded(chunkPos) && !chunkLoadQueue.Contains(chunkPos))
+                {
+                    chunkLoadQueue.Enqueue(chunkPos);
+                }
+            }
+        }
+    }
+
+    private void HandleFirstClick(Cell cell)
+    {
+        Vector2Int safeZone = cell.Position;
+        
+        foreach (var chunk in WorldManager.Instance.GetSurroundingChunks(cell.ParentChunk.ChunkPosition))
+        {
+            Random random = new();
+            // random number between WorldManager.MIN_BOMB_CHUNK and WorldManager.MAX_BOMB_CHUNK
+            int nmines = random.Next(
+                WorldManager.MIN_BOMB_CHUNK, WorldManager.MAX_BOMB_CHUNK + 1);
+            chunk.PlaceMines(nmines, safeZone); // Avoid mines near first click
+        }
+
+        cell.Reveal();
+        FirstClick = false;
     }
 
     private void HandleMouseInput()
     {
-        if (Input.Released("attack1"))
-        {
-            HandleMouseClick(cell => cell.Show());
-            return;
-        }
-        if (Input.Released("attack2"))
-        {
-            HandleMouseClick(cell => cell.Flag());
-            return;
-        }
-        HandleMouseClick(cell => {
-            if (PreviousHover != null)
+        HandleMouseEvent(cell => {
+            if (Input.Released("attack1"))
             {
-                PreviousHover.DeactivateHover();
+                if (FirstClick)
+                {
+                    HandleFirstClick(cell);
+                }
+                else
+                {
+                    cell.Reveal();
+                }
+                return;
             }
-            cell.ActivateHover();
-            PreviousHover = cell;
+            if (Input.Released("attack2"))
+            {
+                cell.ToggleFlag();
+                return;
+            }
+            //TODO: Update the cell's hover state
         });
     }
 
-    private void HandleMouseClick(Action<Cell> cellAction)
+    private void HandleMouseEvent(Action<Cell> cellAction)
     {
         var tr = Scene.Trace.Ray(Scene.Camera.ScreenPixelToRay(Mouse.Position), 1000).Run();
         if (!tr.Hit)
-        {
             return;
-        }
         if (tr.GameObject == null)
-        {
             return;
-        }
-        var chunk = tr.GameObject.GetComponents<Chunk>().FirstOrDefault();
-        if (chunk == null)
-        {
-            return;
-        }
-        var cell = chunk.GetCell(tr.EndPosition);
+        var cell = tr.GameObject.GetComponent<Cell>();
         if (cell != null)
             cellAction(cell);
     }

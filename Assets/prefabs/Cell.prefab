@@ -1,73 +1,71 @@
 {
   "RootObject": {
-    "__guid": "4b59d83f-1f8a-4aa8-ad90-afc8e480e5c4",
+    "__guid": "8ea91e94-38a4-4a55-a6d0-d60cb297b089",
     "Flags": 0,
     "Name": "cell",
     "Enabled": true,
-    "Children": [
+    "Components": [
       {
-        "__guid": "6751c470-332a-49fc-b958-f920398194be",
-        "Flags": 0,
-        "Name": "Object",
-        "Scale": "1,0.1,1",
-        "Enabled": true,
-        "Components": [
-          {
-            "__type": "Sandbox.SkinnedModelRenderer",
-            "__guid": "fff31991-6bc4-48dd-8e24-fc1fd8272f0a",
-            "AnimationGraph": null,
-            "BodyGroups": 18446744073709551615,
-            "BoneMergeTarget": null,
-            "CreateAttachments": false,
-            "CreateBoneObjects": false,
-            "MaterialGroup": null,
-            "MaterialOverride": "materials/unknown.vmat",
-            "Model": null,
-            "Morphs": {},
-            "OnComponentDestroy": null,
-            "OnComponentDisabled": null,
-            "OnComponentEnabled": null,
-            "OnComponentFixedUpdate": null,
-            "OnComponentStart": null,
-            "OnComponentUpdate": null,
-            "Parameters": {
-              "bools": {},
-              "ints": {},
-              "floats": {},
-              "vectors": {},
-              "rotations": {}
-            },
-            "PlaybackRate": 1,
-            "RenderOptions": {
-              "GameLayer": true,
-              "OverlayLayer": false,
-              "BloomLayer": false,
-              "AfterUILayer": false
-            },
-            "RenderType": "Off",
-            "Sequence": {
-              "Name": null
-            },
-            "Tint": "1,1,1,1",
-            "UseAnimGraph": true
-          },
-          {
-            "__type": "Cell",
-            "__guid": "89c7baef-2197-415e-979d-805d5b672041",
-            "HasExploded": false,
-            "Number": 0,
-            "OnComponentDestroy": null,
-            "OnComponentDisabled": null,
-            "OnComponentEnabled": null,
-            "OnComponentFixedUpdate": null,
-            "OnComponentStart": null,
-            "OnComponentUpdate": null,
-            "State": "Hidden",
-            "Type": "Empty"
-          }
-        ]
+        "__type": "Sandbox.BoxCollider",
+        "__guid": "20cc2751-3038-49a7-9c20-f9432b3b8c1e",
+        "Center": "0,0,0",
+        "Friction": null,
+        "IsTrigger": false,
+        "OnComponentDestroy": null,
+        "OnComponentDisabled": null,
+        "OnComponentEnabled": null,
+        "OnComponentFixedUpdate": null,
+        "OnComponentStart": null,
+        "OnComponentUpdate": null,
+        "OnObjectTriggerEnter": null,
+        "OnObjectTriggerExit": null,
+        "OnTriggerEnter": null,
+        "OnTriggerExit": null,
+        "Scale": "50,50,50",
+        "Static": true,
+        "Surface": null,
+        "SurfaceVelocity": "0,0,0"
+      },
+      {
+        "__type": "Sandbox.SpriteRenderer",
+        "__guid": "d0535dc1-1b5f-48ab-8b2e-cae3160c158c",
+        "Additive": false,
+        "CastShadows": false,
+        "Color": "1,1,1,1",
+        "DepthFeather": 0,
+        "FlipHorizontal": false,
+        "FlipVertical": false,
+        "FogStrength": 1,
+        "Lighting": false,
+        "OnComponentDestroy": null,
+        "OnComponentDisabled": null,
+        "OnComponentEnabled": null,
+        "OnComponentFixedUpdate": null,
+        "OnComponentStart": null,
+        "OnComponentUpdate": null,
+        "Opaque": false,
+        "Pivot": "0.5,0.5",
+        "RenderOptions": {
+          "GameLayer": true,
+          "OverlayLayer": false,
+          "BloomLayer": false,
+          "AfterUILayer": false
+        },
+        "Size": "50,50",
+        "Texture": "textures/unknown.vtex"
+      },
+      {
+        "__type": "Cell",
+        "__guid": "3afb63e5-36e6-4263-a1a9-e7dcb9009ebc",
+        "OnComponentDestroy": null,
+        "OnComponentDisabled": null,
+        "OnComponentEnabled": null,
+        "OnComponentFixedUpdate": null,
+        "OnComponentStart": null,
+        "OnComponentUpdate": null
       }
     ],
+    "Children": [],
     "__variables": [],
     "__properties": {
       "FixedUpdateFrequency": 50,

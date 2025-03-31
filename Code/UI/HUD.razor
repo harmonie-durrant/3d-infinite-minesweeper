@@ -13,9 +13,7 @@
 		get
 		{
 			if ( !_instance.IsValid() )
-			{
 				_instance = Game.ActiveScene.GetAllComponents<HUD>().FirstOrDefault();
-			}
 			return _instance;
 		}
 	}

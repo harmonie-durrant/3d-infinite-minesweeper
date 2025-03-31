@@ -5,7 +5,7 @@
   "Ident": "3d_infinite_minesweeper",
   "Schema": 1,
   "IncludeSourceFiles": false,
-  "Resources": null,
+  "Resources": "materials/*\ntextures/*",
   "PackageReferences": [],
   "EditorReferences": null,
   "IsStandaloneOnly": false,

@@ -1,377 +1,68 @@
-using Sandbox;
-using System.Linq;
-
-public enum CellState
-{
-    Hidden,
-    Shown,
-    Flagged
-}
-
-public enum CellType
-{
-    Empty,
-    Mine,
-    Number
-}
-
 public sealed class Cell : Component
 {
-	public int X { get; set; } = -1;
-	public int Z { get; set; } = -1;
-    public CellState State { get; set; } = CellState.Hidden;
-    public CellType Type { get; set; } = CellType.Empty;
-    public int Number { get; set; } = 0;
-    public bool HasExploded { get; set; } = false;
-	public bool IsHovered { get; set; } = false;
+    public SpriteRenderer SpriteRenderer { get; set; } // Reference to the sprite renderer for visual updates
+    public Vector2Int Position { get; set; } // Position inside the chunk (0-15, 0-15)
+    public Chunk ParentChunk { get; set; } // The chunk this cell belongs to
 
-    public HUD hud {
-        get => HUD.Instance;
+    public static int SIZE = 50; // Size of the cell in world units
+
+    public bool IsMine { get; set; } = false;
+    public bool IsRevealed { get; set; } = false;
+    public bool IsFlagged { get; set; } = false;
+    public int NeighborMineCount { get; set; } = 0;
+
+    protected override void OnStart()
+    {
+        ParentChunk = GameObject.Parent.GetComponent<Chunk>();
     }
 
-	#region 
-
-	public bool IsHidden => State == CellState.Hidden;
-	public bool IsShown => State == CellState.Shown;
-	public bool IsFlagged => State == CellState.Flagged;
-	public bool IsEmpty => Type == CellType.Empty;
-	public bool IsMine => Type == CellType.Mine;
-	public bool IsNumber => Type == CellType.Number;
-
-	#endregion
-
-	override protected void OnStart()
-	{
-		X = ((int)GameObject.LocalPosition.x + 400) / 50;
-		Z = (350 - (int)GameObject.LocalPosition.z) / 50;
-	}
-
-	public void ActivateHover()
-	{
-		if (IsShown || IsHovered)
-		{
-			return;
-		}
-		IsHovered = true;
-		var renderer = GetRenderer();
-        if (renderer == null)
-        {
-            return;
-        }
-		if (IsFlagged)
-        {
-            renderer.MaterialOverride = Material.Load("materials/flag_selected.vmat");
-        }
-        else
-        {
-            renderer.MaterialOverride = Material.Load("materials/unknown_selected.vmat");
-        }
-	}
-
-	public void DeactivateHover()
-	{
-		if (IsShown || !IsHovered)
-		{
-			return;
-		}
-		IsHovered = false;
-		var renderer = GetRenderer();
-		if (renderer == null)
-		{
-			return;
-		}
-		if (IsFlagged)
-		{
-			renderer.MaterialOverride = Material.Load("materials/flag.vmat");
-		}
-		else
-		{
-			renderer.MaterialOverride = Material.Load("materials/unknown.vmat");
-		}
-	}
-
-	public List<Cell> GetNearbyCells()
-	{
-		return Game.ActiveScene.GetAllComponents<Cell>().Where(cell => {
-			return cell.WorldPosition.Distance(WorldPosition) <= 75 && cell.WorldPosition.Distance(WorldPosition) > 1;
-		}).ToList();
-	}
-
-    public void Show()
+    public void UpdateVisuals()
     {
-        if (IsShown || IsFlagged)
+        if (IsRevealed)
         {
-			return;
-        }
-
-        var renderer = GetRenderer();
-        if (renderer == null)
-        {
-			return;
-        }
-
-        State = CellState.Shown;
-
-        if (IsMine)
-        {
-			HandleMineCell(renderer);
-            return;
-        }
-
-        hud.Score += 1;
-
-        if (IsNumber || Number > 0)
-        {
-			SetNumberMaterial(renderer);
-            return;
-        }
-
-        if (IsEmpty && Number == 0)
-        {
-			if (Number == 0)
-				RevealEmptyCell(renderer);
-			else
-				Log.Error("Empty cell has number");
-        }
-    }
-
-    private SkinnedModelRenderer GetRenderer()
-    {
-        var renderer = GameObject.GetComponents<SkinnedModelRenderer>().FirstOrDefault();
-        if (renderer == null)
-        {
-            Log.Error("Failed to get renderer component");
-        }
-        return renderer;
-    }
-
-    private void HandleMineCell(SkinnedModelRenderer renderer)
-    {
-
-        if (CameraMovement.Instance.IsGameOver)
-        {
-            renderer.MaterialOverride = Material.Load("materials/bomb.vmat");
-            return;
-        }
-
-        CameraMovement.Instance.IsGameOver = true;
-        renderer.MaterialOverride = Material.Load("materials/bomb_exploded.vmat");
-        HasExploded = true;
-        RevealAllMines();
-        GameOver.Instance.Show = true;
-    }
-
-    private void RevealAllMines()
-    {
-		var chunks = Game.ActiveScene.GetAllComponents<Chunk>();
-		foreach (var chunk in chunks)
-		{
-			if (chunk == null)
-			{
-				Log.Error("Failed to get chunk component");
-				return;
-			}
-
-			foreach (var cell in chunk.Cells)
-			{
-				var cellComponent = cell.GetComponentInChildren<Cell>();
-				if (cellComponent.IsMine)
-				{
-					cellComponent.Show();
-				}
-				else if (cellComponent.IsFlagged)
-				{
-					ShowIncorrectFlag(cellComponent);
-				}
-			}
-		}
-    }
-
-	private void ShowIncorrectFlag(Cell cellComponent)
-	{
-		var renderer = cellComponent.GetRenderer();
-		if (renderer == null)
-		{
-			return;
-		}
-		renderer.MaterialOverride = Material.Load("materials/flag_incorrect.vmat");
-	}
-
-    private void SetNumberMaterial(SkinnedModelRenderer renderer)
-    {
-        string materialPath = Number switch
-        {
-            1 => "materials/1.vmat",
-            2 => "materials/2.vmat",
-            3 => "materials/3.vmat",
-            4 => "materials/4.vmat",
-            5 => "materials/5.vmat",
-            6 => "materials/6.vmat",
-            7 => "materials/7.vmat",
-            8 => "materials/8.vmat",
-            _ => "materials/unknown.vmat"
-        };
-
-		renderer.MaterialOverride = Material.Load(materialPath);
-    }
-
-    private void RevealEmptyCell(SkinnedModelRenderer renderer)
-    {
-        renderer.MaterialOverride = Material.Load("materials/empty.vmat");
-        RevealNearbyCells();
-    }
-
-    public void Flag()
-    {
-        var renderer = GetRenderer();
-        if (renderer == null)
-        {
-            return;
-        }
-
-        if (IsHidden)
-        {
-            State = CellState.Flagged;
-            renderer.MaterialOverride = Material.Load(IsHovered ? "materials/flag_hovered.vmat" : "materials/flag.vmat");
+            if (IsMine)
+            {
+                // TODO: Handle mine explosion visuals for clicked mine that caused the game over
+                if (CameraMovement.Instance.IsGameOver && IsFlagged)
+                    SpriteRenderer.Texture = Texture.Load(SpriteBank.Sprites["flag_incorrect"]);
+                SpriteRenderer.Texture = Texture.Load(SpriteBank.Sprites["bomb"]);
+            }
+            else if (NeighborMineCount > 0)
+                SpriteRenderer.Texture = Texture.Load(SpriteBank.Sprites[NeighborMineCount.ToString()]);
+            else
+                SpriteRenderer.Texture = Texture.Load(SpriteBank.Sprites["empty"]);
         }
         else if (IsFlagged)
         {
-            State = CellState.Hidden;
-            renderer.MaterialOverride = Material.Load(IsHovered ? "materials/unknown_hovered.vmat" : "materials/unknown.vmat");
+            SpriteRenderer.Texture = Texture.Load(SpriteBank.Sprites["flag"]);
+        }
+        else
+        {
+            SpriteRenderer.Texture = Texture.Load(SpriteBank.Sprites["unknown"]);
         }
     }
 
-	private void RevealNearbyCells()
-	{
-		var chunk = GameObject.Parent.GetComponent<Chunk>();
-		if (chunk == null)
-		{
-			Log.Error("Failed to get chunk component");
-			return;
-		}
-		//GenerateChunksForReveal(chunk);
-		var nearby = Game.ActiveScene.GetAllComponents<Cell>().Where(cell => {
-			return cell.WorldPosition.Distance(WorldPosition) <= 75 && cell.WorldPosition.Distance(WorldPosition) > 1;
-		});
-		foreach (var cell in nearby)
-		{
-			if (cell.IsHidden && cell.Type != CellType.Mine)
-			{
-				cell.Show();
-				HUD.Instance.Score += 1;
-			}
-		}
-	}
+    public void Reveal()
+    {
+        if (IsRevealed || IsFlagged) return;
+        IsRevealed = true;
 
-	private void GenerateChunksForReveal(Chunk chunk)
-	{
-		if (X == 1)
-			ChunkRenderer.Instance.CreateChunk(chunk.X - 1, chunk.Z);
-		if (Z == 1)
-			ChunkRenderer.Instance.CreateChunk(chunk.X, chunk.Z - 1);
-		if (X == 1 && Z == 1)
-			ChunkRenderer.Instance.CreateChunk(chunk.X - 1, chunk.Z - 1);
-		if (X == 14)
-			ChunkRenderer.Instance.CreateChunk(chunk.X +1, chunk.Z);
-		if (Z == 14)
-			ChunkRenderer.Instance.CreateChunk(chunk.X, chunk.Z + 1);
-		if (X == 14 && Z == 14)
-			ChunkRenderer.Instance.CreateChunk(chunk.X + 1, chunk.Z + 1);
-	}
+        if (IsMine)
+        {
+            CameraMovement.Instance.IsGameOver = true;
+            UpdateVisuals();
+            return;
+        }
 
-	private List<Cell> GetNearbyCells(Chunk chunk)
-	{
-		var nearby = chunk.Cells.Where(cell => {
-			return cell.X >= X - 1 && cell.X <= X + 1 && cell.Z >= Z - 1 && cell.Z <= Z + 1 && cell.Type != CellType.Mine;
-		});
-		if (X == 0 || X == 15 || Z == 0 || Z == 15)
-			nearby.Concat(GetNearbyCellsInNeighbouringChunks(chunk));
-		return nearby.ToList();
-	}
+        if (NeighborMineCount == 0)
+            ParentChunk.RevealEmptyArea(Position);
+        UpdateVisuals();
+    }
 
-	private List<Cell> GetNearbyCellsInNeighbouringChunks(Chunk chunk)
-	{
-		var nearby = new List<Cell>();
-		if (X == 0)
-		{
-			var leftChunk = ChunkRenderer.GetChunk(chunk.X - 1, chunk.Z);
-			if (leftChunk != null)
-			{
-				nearby.AddRange(leftChunk.Cells.Where(cell => {
-					return cell.X == 15 && cell.Z >= Z - 1 && cell.Z <= Z + 1 && cell.Type != CellType.Mine;
-				}));
-			}
-			if (Z == 0)
-			{
-				var bottomLeftChunk = ChunkRenderer.GetChunk(chunk.X - 1, chunk.Z - 1);
-				if (bottomLeftChunk != null)
-				{
-					nearby.AddRange(bottomLeftChunk.Cells.Where(cell => {
-						return cell.X == 15 && cell.Z == 15 && cell.Type != CellType.Mine;
-					}));
-				}
-			}
-			if (Z == 15)
-			{
-				var topLeftChunk = ChunkRenderer.GetChunk(chunk.X - 1, chunk.Z + 1);
-				if (topLeftChunk != null)
-				{
-					nearby.AddRange(topLeftChunk.Cells.Where(cell => {
-						return cell.X == 15 && cell.Z == 0 && cell.Type != CellType.Mine;
-					}));
-				}
-			}
-		}
-		if (X == 15)
-		{
-			var rightChunk = ChunkRenderer.GetChunk(chunk.X + 1, chunk.Z);
-			if (rightChunk != null)
-			{
-				nearby.AddRange(rightChunk.Cells.Where(cell => {
-					return cell.X == 0 && cell.Z >= Z - 1 && cell.Z <= Z + 1 && cell.Type != CellType.Mine;
-				}));
-			}
-			if (Z == 0)
-			{
-				var bottomRightChunk = ChunkRenderer.GetChunk(chunk.X + 1, chunk.Z - 1);
-				if (bottomRightChunk != null)
-				{
-					nearby.AddRange(bottomRightChunk.Cells.Where(cell => {
-						return cell.X == 0 && cell.Z == 15 && cell.Type != CellType.Mine;
-					}));
-				}
-			}
-			if (Z == 15)
-			{
-				var topRightChunk = ChunkRenderer.GetChunk(chunk.X + 1, chunk.Z + 1);
-				if (topRightChunk != null)
-				{
-					nearby.AddRange(topRightChunk.Cells.Where(cell => {
-						return cell.X == 0 && cell.Z == 0 && cell.Type != CellType.Mine;
-					}));
-				}
-			}
-		}
-		if (Z == 0)
-		{
-			var bottomChunk = ChunkRenderer.GetChunk(chunk.X, chunk.Z - 1);
-			if (bottomChunk != null)
-			{
-				nearby.AddRange(bottomChunk.Cells.Where(cell => {
-					return cell.Z == 15 && cell.X >= X - 1 && cell.X <= X + 1 && cell.Type != CellType.Mine;
-				}));
-			}
-		}
-		if (Z == 15)
-		{
-			var topChunk = ChunkRenderer.GetChunk(chunk.X, chunk.Z + 1);
-			if (topChunk != null)
-			{
-				nearby.AddRange(topChunk.Cells.Where(cell => {
-					return cell.Z == 0 && cell.X >= X - 1 && cell.X <= X + 1 && cell.Type != CellType.Mine;
-				}));
-			}
-		}
-		return nearby;
-	}
+    public void ToggleFlag()
+    {
+        if (IsRevealed) return;
+        IsFlagged = !IsFlagged;
+        UpdateVisuals();
+    }
 }
