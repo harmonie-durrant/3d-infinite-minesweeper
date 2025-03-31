@@ -123,7 +123,11 @@ public sealed class CameraMovement : Component
         }
 
         if (cell.Reveal())
+        {
             HUD.Instance.Score += 1;
+            if (HUD.Instance.Score >= 1000)
+                Sandbox.Services.Achievements.Unlock( "one_thousand" );
+        }
         FirstClick = false;
     }
 
@@ -137,7 +141,11 @@ public sealed class CameraMovement : Component
                 else
                 {
                     if (cell.Reveal())
+                    {
                         HUD.Instance.Score += 1;
+                        if (HUD.Instance.Score >= 1000)
+                            Sandbox.Services.Achievements.Unlock( "one_thousand" );
+                    }
                 }
             }
             else if (Input.Released("attack2"))
