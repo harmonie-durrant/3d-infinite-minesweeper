@@ -3,7 +3,7 @@ public sealed class MusicManager : Component
 	public static MusicManager Instance { get; set; } = null; // Singleton instance
 	[Property] public SoundEvent BackgroundMusic { get; set; } // Background music event
 
-	public SoundHandle? DJ = null; // Sound handle for the music
+	public SoundHandle DJ = null; // Sound handle for the music
 
 	protected override void OnAwake()
 	{
@@ -24,7 +24,7 @@ public sealed class MusicManager : Component
 	protected override void OnDestroy()
 	{
 		base.OnDestroy();
-		if (DJ.IsPlaying)
+		if (DJ is not null && DJ.IsPlaying)
 			StopMusic(); // Stop the music if it's playing
 	}
 
@@ -37,7 +37,7 @@ public sealed class MusicManager : Component
 
 	public void PlayMusic()
 	{
-		if (DJ.IsPlaying)
+		if (DJ is not null && DJ.IsPlaying)
 			StopMusic();
 		if (BackgroundMusic is not null)
 			DJ = Sound.Play(BackgroundMusic); // Play the new music
