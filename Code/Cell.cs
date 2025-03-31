@@ -55,9 +55,9 @@ public sealed class Cell : Component
         }
     }
 
-    public void Reveal()
+    public bool Reveal()
     {
-        if (IsRevealed || IsFlagged) return;
+        if (IsRevealed || IsFlagged) return false;
         IsRevealed = true;
 
         if (IsMine)
@@ -66,14 +66,14 @@ public sealed class Cell : Component
             Sound.Play("explosion");
             ParentChunk.ShowMinesInChunkAndNeighbors();
             CameraMovement.Instance.IsGameOver = true;
-            return;
+            return false;
         }
 
         Sound.Play("clear");
-
         if (NeighborMineCount == 0)
             ParentChunk.RevealEmptyArea(Position);
         UpdateVisuals();
+        return true;
     }
 
     public void ToggleFlag()

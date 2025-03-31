@@ -122,7 +122,8 @@ public sealed class CameraMovement : Component
             chunk.PlaceMines(nmines, safeZone); // Avoid mines near first click
         }
 
-        cell.Reveal();
+        if (cell.Reveal())
+            HUD.Instance.Score += 1;
         FirstClick = false;
     }
 
@@ -134,12 +135,13 @@ public sealed class CameraMovement : Component
                 if (FirstClick)
                     HandleFirstClick(cell);
                 else
-                    cell.Reveal();
+                {
+                    if (cell.Reveal())
+                        HUD.Instance.Score += 1;
+                }
             }
             else if (Input.Released("attack2"))
-            {
                 cell.ToggleFlag();
-            }
             else
             {
                 if (previousCell != null && previousCell != cell)
@@ -147,7 +149,6 @@ public sealed class CameraMovement : Component
                 cell.setHoverState(true);
             }
             previousCell = cell;
-            //TODO: Update the cell's hover state
         });
     }
 
