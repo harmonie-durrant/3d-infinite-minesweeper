@@ -23,6 +23,7 @@
 	/// </summary>
 	private void Play()
 	{
+		Sandbox.Services.Achievements.Unlock( "first_game" );
 		Scene.LoadFromFile("scenes/Game.scene");
 	}
 
