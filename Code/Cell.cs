@@ -62,8 +62,10 @@ public sealed class Cell : Component
 
         if (IsMine)
         {
+            SpriteRenderer.Texture = Texture.Load(SpriteBank.Sprites["bomb_exploded"]);
+            Sound.Play("explosion");
+            ParentChunk.ShowMinesInChunkAndNeighbors();
             CameraMovement.Instance.IsGameOver = true;
-            UpdateVisuals();
             return;
         }
 

@@ -169,4 +169,24 @@ public sealed class Chunk : Component
         int finalY = y / Cell.SIZE;
         return new Vector2Int(finalX, finalY);
     }
+
+    public void ShowMinesInChunkAndNeighbors(bool doNeighbors = true)
+    {
+        foreach (var cell in Cells.Values)
+        {
+            if (cell.IsRevealed) continue; // Skip already revealed cells
+            if (cell.IsMine)
+                cell.SpriteRenderer.Texture = Texture.Load(SpriteBank.Sprites["bomb"]);
+        }
+
+        // Show mines in neighboring chunks
+        if (!doNeighbors) return;
+        foreach (var offset in GetNeighborOffsets())
+        {
+            Vector2Int neighborPos = ChunkPosition + offset;
+            Chunk neighboringChunk = WorldManager.Instance.GetChunk(neighborPos);
+            if (neighboringChunk != null)
+                neighboringChunk.ShowMinesInChunkAndNeighbors(false);
+        }
+    }
 }
