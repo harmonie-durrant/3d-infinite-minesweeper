@@ -6,6 +6,7 @@ public sealed class Cell : Component
 
     public static int SIZE = 50; // Size of the cell in world units
 
+    public bool IsHovered { get; set; } = false;
     public bool IsMine { get; set; } = false;
     public bool IsRevealed { get; set; } = false;
     public bool IsFlagged { get; set; } = false;
@@ -14,6 +15,12 @@ public sealed class Cell : Component
     protected override void OnStart()
     {
         ParentChunk = GameObject.Parent.GetComponent<Chunk>();
+    }
+
+    public void setHoverState(bool isHovered)
+    {
+        IsHovered = isHovered;
+        UpdateVisuals();
     }
 
     public void UpdateVisuals()
@@ -34,11 +41,17 @@ public sealed class Cell : Component
         }
         else if (IsFlagged)
         {
-            SpriteRenderer.Texture = Texture.Load(SpriteBank.Sprites["flag"]);
+            if (IsHovered)
+                SpriteRenderer.Texture = Texture.Load(SpriteBank.Sprites["flag_hover"]);
+            else
+                SpriteRenderer.Texture = Texture.Load(SpriteBank.Sprites["flag"]);
         }
         else
         {
-            SpriteRenderer.Texture = Texture.Load(SpriteBank.Sprites["unknown"]);
+            if (IsHovered)
+                SpriteRenderer.Texture = Texture.Load(SpriteBank.Sprites["unknown_hover"]);
+            else
+                SpriteRenderer.Texture = Texture.Load(SpriteBank.Sprites["unknown"]);
         }
     }
 
@@ -54,6 +67,8 @@ public sealed class Cell : Component
             return;
         }
 
+        Sound.Play("clear");
+
         if (NeighborMineCount == 0)
             ParentChunk.RevealEmptyArea(Position);
         UpdateVisuals();
@@ -63,6 +78,7 @@ public sealed class Cell : Component
     {
         if (IsRevealed) return;
         IsFlagged = !IsFlagged;
+        Sound.Play("flag");
         UpdateVisuals();
     }
 }

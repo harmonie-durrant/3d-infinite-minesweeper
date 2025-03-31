@@ -126,6 +126,17 @@
           "OnComponentFixedUpdate": null,
           "OnComponentStart": null,
           "OnComponentUpdate": null
+        },
+        {
+          "__type": "MusicManager",
+          "__guid": "2bdfea1d-6a00-4e8a-9e51-92f3846c8325",
+          "BackgroundMusic": "sounds/background_music.sound",
+          "OnComponentDestroy": null,
+          "OnComponentDisabled": null,
+          "OnComponentEnabled": null,
+          "OnComponentFixedUpdate": null,
+          "OnComponentStart": null,
+          "OnComponentUpdate": null
         }
       ]
     },

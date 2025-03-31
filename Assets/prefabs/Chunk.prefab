@@ -8,16 +8,33 @@
       {
         "__type": "Chunk",
         "__guid": "e8db0852-2a90-4318-b59d-fdb5d9c4a69b",
-        "CellPrefab": {
-          "_type": "gameobject",
-          "prefab": "prefabs/cell.prefab"
-        },
         "OnComponentDestroy": null,
         "OnComponentDisabled": null,
         "OnComponentEnabled": null,
         "OnComponentFixedUpdate": null,
         "OnComponentStart": null,
         "OnComponentUpdate": null
+      },
+      {
+        "__type": "Sandbox.BoxCollider",
+        "__guid": "d6e2e6a4-95d3-4b36-aa24-03060a785040",
+        "Center": "400,400,0",
+        "Friction": null,
+        "IsTrigger": false,
+        "OnComponentDestroy": null,
+        "OnComponentDisabled": null,
+        "OnComponentEnabled": null,
+        "OnComponentFixedUpdate": null,
+        "OnComponentStart": null,
+        "OnComponentUpdate": null,
+        "OnObjectTriggerEnter": null,
+        "OnObjectTriggerExit": null,
+        "OnTriggerEnter": null,
+        "OnTriggerExit": null,
+        "Scale": "800,800,1",
+        "Static": true,
+        "Surface": null,
+        "SurfaceVelocity": "0,0,0"
       }
     ],
     "Children": [],

@@ -3,10 +3,10 @@ public static class SpriteBank
     public static Dictionary<string, string> Sprites { get; } = new()
     {
         { "unknown", "textures/unknown.vtex" },
-        { "unknown_hover", "textures/unknown_hover.vtex" },
+        { "unknown_hover", "textures/unknown_selected.vtex" },
         { "flag", "textures/flag.vtex" },
         { "flag_incorrect", "textures/flag_incorrect.vtex" },
-        { "flag_hover", "textures/flag_hover.vtex" },
+        { "flag_hover", "textures/flag_selected.vtex" },
         { "bomb", "textures/bomb.vtex" },
         { "bomb_exploded", "textures/bomb_exploded.vtex" },
         { "empty", "textures/empty.vtex" },

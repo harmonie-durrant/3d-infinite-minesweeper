@@ -6,9 +6,9 @@ public sealed class CameraMovement : Component
     [Property] public GameOver GameOver { get; set; }
     public bool IsGameOver { get; set; } = false;
     public bool FirstClick { get; set; } = true;
-
+    public Cell previousCell { get; set; } = null;
     private Queue<Vector2Int> chunkLoadQueue = new Queue<Vector2Int>();
-    public RealTimeUntil ChunkLoadingDelay { get; set; } = 0.2f; // Delay between chunk loads
+    public RealTimeUntil ChunkLoadingDelay { get; set; } = 0.1f; // Delay between chunk loads
 
     public static CameraMovement Instance {
         get
@@ -72,6 +72,8 @@ public sealed class CameraMovement : Component
 
     private void HandleMovement()
     {
+        if (FirstClick)
+            return; // Don't allow movement until the first click is made
         if (Input.Down("Forward"))
             MoveCamera(new Vector3(1, 0, 0));
         if (Input.Down("Backward"))
@@ -89,7 +91,6 @@ public sealed class CameraMovement : Component
         GameObject.WorldPosition += direction * Time.Delta * MoveSpeed;
 
         // Calculate the 9 chunk positions around the camera
-        HashSet<Vector2Int> chunksToKeepLoaded = new HashSet<Vector2Int>();
         for (int dx = -2; dx <= 2; dx++)
         {
             for (int dy = -2; dy <= 2; dy++)
@@ -111,10 +112,10 @@ public sealed class CameraMovement : Component
     private void HandleFirstClick(Cell cell)
     {
         Vector2Int safeZone = cell.Position;
-        
+
+        Random random = new();
         foreach (var chunk in WorldManager.Instance.GetSurroundingChunks(cell.ParentChunk.ChunkPosition))
         {
-            Random random = new();
             // random number between WorldManager.MIN_BOMB_CHUNK and WorldManager.MAX_BOMB_CHUNK
             int nmines = random.Next(
                 WorldManager.MIN_BOMB_CHUNK, WorldManager.MAX_BOMB_CHUNK + 1);
@@ -131,20 +132,21 @@ public sealed class CameraMovement : Component
             if (Input.Released("attack1"))
             {
                 if (FirstClick)
-                {
                     HandleFirstClick(cell);
-                }
                 else
-                {
                     cell.Reveal();
-                }
-                return;
             }
-            if (Input.Released("attack2"))
+            else if (Input.Released("attack2"))
             {
                 cell.ToggleFlag();
-                return;
             }
+            else
+            {
+                if (previousCell != null && previousCell != cell)
+                    previousCell.setHoverState(false);
+                cell.setHoverState(true);
+            }
+            previousCell = cell;
             //TODO: Update the cell's hover state
         });
     }
@@ -156,8 +158,12 @@ public sealed class CameraMovement : Component
             return;
         if (tr.GameObject == null)
             return;
-        var cell = tr.GameObject.GetComponent<Cell>();
-        if (cell != null)
-            cellAction(cell);
+        var chunk = tr.GameObject.GetComponent<Chunk>();
+        if (chunk == null)
+            return;
+        var cell = chunk.GetCell(tr.HitPosition);
+        if (cell == null)
+            return;
+        cellAction(cell);
     }
 }

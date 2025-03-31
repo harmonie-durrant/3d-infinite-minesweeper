@@ -2,6 +2,7 @@ public sealed class Chunk : Component
 {
     public const int SIZE = 16; // 16x16 grid
     public Vector2Int ChunkPosition { get; set; } // (ChunkX, ChunkY)
+
     public GameObject CellPrefab { get; set; }   // Assign this in Inspector
     public Dictionary<Vector2Int, Cell> Cells { get; set; } = new();
 
@@ -16,7 +17,7 @@ public sealed class Chunk : Component
                 newCellObject.Parent = GameObject; // Set the parent to this chunk
                 newCellObject.LocalPosition = new Vector3(x * Cell.SIZE, y * Cell.SIZE, 0); // Adjust the spacing as needed
                 newCellObject.LocalPosition += new Vector3(Cell.SIZE / 2, Cell.SIZE / 2, 0); // Center the cell in it's position
-                Cell newCell = newCellObject.GetComponent<Cell>();
+                Cell newCell = newCellObject.GetOrAddComponent<Cell>();
                 newCell.Position = localPos;
                 newCell.ParentChunk = this;
                 Cells[localPos] = newCell;
@@ -25,6 +26,8 @@ public sealed class Chunk : Component
                 newCell.SpriteRenderer.Texture = Texture.Load(SpriteBank.Sprites["unknown"]);
             }
         }
+        if (CameraMovement.Instance.FirstClick == false)
+            PlaceMines(WorldManager.Instance.random.Next(WorldManager.MIN_BOMB_CHUNK, WorldManager.MAX_BOMB_CHUNK + 1), Vector2Int.Zero); // Place mines in the chunk
     }
 
     public void PlaceMines(int mineCount, Vector2Int safeZone)
@@ -115,10 +118,8 @@ public sealed class Chunk : Component
     public void RevealEmptyArea(Vector2Int startPos)
     {
         if (!Cells.ContainsKey(startPos) || Cells[startPos].IsMine)
-        {
-            //Log.Info("Cannot reveal empty areas yet (not implemented).");
             return;
-        }
+
         Queue<Cell> queue = new();
         HashSet<Cell> visited = new();
         queue.Enqueue(Cells[startPos]);
@@ -161,8 +162,11 @@ public sealed class Chunk : Component
 
     private Vector2Int WorldToLocalPosition(Vector3 worldPosition)
     {
-        int x = (int)(worldPosition.x % SIZE);
-        int y = (int)(worldPosition.y % SIZE);
-        return new Vector2Int(x, y);
+        // Convert world position to local cell position
+        int x = (int)(worldPosition.x - GameObject.LocalPosition.x);
+        int y = (int)(worldPosition.y - GameObject.LocalPosition.y);
+        int finalX = x / Cell.SIZE;
+        int finalY = y / Cell.SIZE;
+        return new Vector2Int(finalX, finalY);
     }
 }
