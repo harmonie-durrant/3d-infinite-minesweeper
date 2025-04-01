@@ -57,7 +57,7 @@ public sealed class CameraMovement : Component
                 Vector2Int chunkToLoad = chunkLoadQueue.Dequeue();
                 WorldManager.Instance.GetOrCreateChunk(chunkToLoad);
             }
-            ChunkLoadingDelay = 0.2f; // Reset the delay
+            ChunkLoadingDelay = 0.1f; // Reset the delay
         }
     }
 
@@ -120,6 +120,12 @@ public sealed class CameraMovement : Component
             int nmines = random.Next(
                 WorldManager.MIN_BOMB_CHUNK, WorldManager.MAX_BOMB_CHUNK + 1);
             chunk.PlaceMines(nmines, safeZone); // Avoid mines near first click
+        }
+
+        foreach (var chunk in Game.ActiveScene.GetAllComponents<Chunk>())
+        {
+            if (chunk.MineCount == 0)
+                chunk.PlaceMines(random.Next(WorldManager.MIN_BOMB_CHUNK, WorldManager.MAX_BOMB_CHUNK + 1), new Vector2Int(-1)); // Place mines in the chunk
         }
 
         if (cell.Reveal())

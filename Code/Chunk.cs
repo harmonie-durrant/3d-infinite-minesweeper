@@ -5,6 +5,7 @@ public sealed class Chunk : Component
 
     public GameObject CellPrefab { get; set; }   // Assign this in Inspector
     public Dictionary<Vector2Int, Cell> Cells { get; set; } = new();
+    public int MineCount { get; set; } = 0; // Number of mines in this chunk
 
     public void GenerateCells()
     {
@@ -41,6 +42,7 @@ public sealed class Chunk : Component
             Cell mineCell = validCells[index];
             mineCell.IsMine = true;
             validCells.RemoveAt(index);
+            MineCount++;
         }
 
         UpdateMineCounts();
@@ -50,9 +52,7 @@ public sealed class Chunk : Component
             Vector2Int neighborPos = ChunkPosition + offset;
             Chunk neighboringChunk = WorldManager.Instance.GetChunk(neighborPos);
             if (neighboringChunk != null)
-            {
                 neighboringChunk.UpdateMineCounts();
-            }
         }
     }
 
