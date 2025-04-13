@@ -21,9 +21,13 @@
 - **Future Plans**  
   Multiplayer, leaderboards, powerups, and more !
 
-📄 License
+---
+
+## 📄 License
 This project is licensed under the MIT License.
 See the LICENSE file for more information.
+
+---
 
 ## ✨ Credits
 Developed by [@harmonie-durrant](https://github.com/harmonie-durrant)
